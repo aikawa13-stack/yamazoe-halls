@@ -1,0 +1,14 @@
+# Node / Firebase generated files
+node_modules/
+lib/
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# Never commit runtime configuration or credentials
+functions/.env
+functions/.env.*
+!functions/.env.yamazoe-halls-staging.example
+functions/.secret.local
+*.pem
+*-service-account.json

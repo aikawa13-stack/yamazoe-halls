@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "yamazoe-halls-staging",
+    "staging": "yamazoe-halls-staging"
+  }
+}
