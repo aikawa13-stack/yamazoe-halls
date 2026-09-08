@@ -9,24 +9,50 @@
   </head>
   <body>
     <main class="page-shell">
-      <section class="intro" aria-labelledby="page-title">
+      <header class="intro" aria-labelledby="page-title">
         <p class="eyebrow">公民館利用予約</p>
         <h1 id="page-title">山添村公民館予約フォーム</h1>
-        <p class="lead">東山・波多野・豊原の公民館利用を予約するためのフォームです。利用施設、利用日、利用区分を選んでお申し込みください。</p>
-        <dl class="details" aria-label="予約案内">
-          <div><dt>利用施設</dt><dd>東山・波多野・豊原</dd></div>
-          <div><dt>利用区分</dt><dd>午前・午後・夜間・全日</dd></div>
-        </dl>
+        <p class="lead">東山・波多野・豊原の公民館の空き状況を確認し、利用予約をお申し込みいただけます。</p>
+      </header>
+
+      <section class="card availability-card" aria-labelledby="availability-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">AVAILABILITY</p><h2 id="availability-title">予約状況</h2></div>
+          <label class="facility-picker">館を選択
+            <select id="availability-facility">
+              <option value="東山" selected>東山</option>
+              <option value="波多野">波多野</option>
+              <option value="豊原">豊原</option>
+            </select>
+          </label>
+        </div>
+        <div class="calendar-controls">
+          <button id="previous-month" class="secondary" type="button" aria-label="前の月">前月</button>
+          <h3 id="calendar-month"></h3>
+          <button id="next-month" class="secondary" type="button" aria-label="次の月">次月</button>
+        </div>
+        <div class="availability-legend" aria-label="空き状況の凡例">
+          <span><i class="status-dot available"></i>空き</span>
+          <span><i class="status-dot pending"></i>受付中</span>
+          <span><i class="status-dot closed"></i>停止</span>
+        </div>
+        <div id="calendar" class="calendar" role="grid" aria-labelledby="calendar-month"></div>
+        <p id="availability-status" role="status" aria-live="polite"></p>
       </section>
 
-      <section class="card" aria-labelledby="form-title">
+      <section class="card slot-card" aria-labelledby="slot-title">
+        <div class="section-heading"><div><p class="eyebrow">SELECT A SLOT</p><h2 id="slot-title">利用区分を選択</h2></div><p id="selected-date-label" class="selected-date"></p></div>
+        <div id="slot-list" class="slot-list" aria-live="polite"></div>
+      </section>
+
+      <section id="booking" class="card" aria-labelledby="form-title">
+        <p class="eyebrow">BOOKING</p>
         <h2 id="form-title">予約内容を入力</h2>
         <form id="reservation-form" novalidate>
           <div class="form-grid">
             <label>利用施設
               <select id="facility" name="facility" required>
-                <option value="" selected disabled>選択してください</option>
-                <option value="東山">東山</option>
+                <option value="東山" selected>東山</option>
                 <option value="波多野">波多野</option>
                 <option value="豊原">豊原</option>
               </select>
@@ -53,10 +79,10 @@
               <textarea id="purpose" name="purpose" maxlength="200" rows="3" required></textarea>
             </label>
             <label class="full-width">備考（任意）
-              <textarea id="notes" name="notes" maxlength="500" rows="4" placeholder="ご希望があればご記入ください"></textarea>
+              <textarea id="notes" name="notes" maxlength="500" rows="4"></textarea>
             </label>
           </div>
-          <p class="hint">同じ施設・利用日・利用区分の予約枠は先着順です。送信後は内容を変更できません。</p>
+          <p class="hint">同じ施設・利用日・利用区分の予約枠は先着順です。</p>
           <button id="submit-button" type="submit">予約を送信</button>
           <p id="form-status" role="status" aria-live="polite"></p>
         </form>

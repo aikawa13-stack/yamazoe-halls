@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, getIdTokenResult, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-import { collection, deleteDoc, doc, getFirestore, onSnapshot, orderBy, query, updateDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, doc, getFirestore, onSnapshot, orderBy, query, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB4RYPAvnwets8LI6Vefnuxc_eC7ftymig",
@@ -82,20 +82,33 @@ editForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!selectedId || !editForm.reportValidity()) return;
   try {
-    await updateDoc(doc(db, "reservations", selectedId), {
+    const reservation = reservations.get(selectedId);
+    const status = document.querySelector("#edit-status").value;
+    const batch = writeBatch(db);
+    batch.update(doc(db, "reservations", selectedId), {
       customerName: document.querySelector("#edit-name").value.trim(),
       phone: document.querySelector("#edit-phone").value.trim(),
       purpose: document.querySelector("#edit-purpose").value.trim(),
       notes: document.querySelector("#edit-notes").value.trim(),
-      status: document.querySelector("#edit-status").value,
+      status,
     });
+    batch.set(doc(db, "availability", selectedId), {
+      slotId: selectedId, facility: reservation.facility, date: reservation.date, slot: reservation.slot, status,
+    }, { merge: true });
+    await batch.commit();
     message(adminStatus, "予約内容を保存しました。", "success");
   } catch { message(adminStatus, "保存できません。職員権限を確認してください。", "error"); }
 });
 
 document.querySelector("#delete-reservation").addEventListener("click", async () => {
   if (!selectedId || !window.confirm("この予約を削除しますか？")) return;
-  try { await deleteDoc(doc(db, "reservations", selectedId)); message(adminStatus, "予約を削除しました。", "success"); }
+  try {
+    const batch = writeBatch(db);
+    batch.delete(doc(db, "reservations", selectedId));
+    batch.delete(doc(db, "availability", selectedId));
+    await batch.commit();
+    message(adminStatus, "予約を削除しました。", "success");
+  }
   catch { message(adminStatus, "削除できません。職員権限を確認してください。", "error"); }
 });
 
