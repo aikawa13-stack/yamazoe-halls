@@ -3,12 +3,61 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Yamazoe Halls — Staging</title>
+    <meta name="theme-color" content="#17324d" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Yamazoe Halls | ご予約</title>
   </head>
   <body>
-    <main>
-      <h1>Yamazoe Halls — Staging</h1>
-      <p>Firebase Hosting is configured.</p>
+    <main class="page-shell">
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">YAMAZOE HALLS</p>
+        <h1 id="page-title">ご予約</h1>
+        <p class="lead">ご希望の日時と人数を選択して、予約リクエストをお送りください。</p>
+        <dl class="details" aria-label="予約案内">
+          <div><dt>受付時間</dt><dd>10:00–18:00</dd></div>
+          <div><dt>ご利用人数</dt><dd>1–12名</dd></div>
+          <div><dt>予約枠</dt><dd>1時間ごと</dd></div>
+        </dl>
+      </section>
+
+      <section class="card" aria-labelledby="form-title">
+        <h2 id="form-title">予約内容を入力</h2>
+        <form id="reservation-form" novalidate>
+          <div class="form-grid">
+            <label>ご利用日
+              <input id="date" name="date" type="date" required />
+            </label>
+            <label>開始時間
+              <select id="time" name="time" required>
+                <option value="" selected disabled>選択してください</option>
+                <option>10:00</option><option>11:00</option><option>12:00</option><option>13:00</option>
+                <option>14:00</option><option>15:00</option><option>16:00</option><option>17:00</option>
+              </select>
+            </label>
+            <label>人数
+              <select id="guest-count" name="guestCount" required>
+                <option value="" selected disabled>選択してください</option>
+              </select>
+            </label>
+            <label>お名前
+              <input id="customer-name" name="customerName" autocomplete="name" maxlength="80" required />
+            </label>
+            <label>メールアドレス
+              <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required />
+            </label>
+            <label>電話番号
+              <input id="phone" name="phone" type="tel" autocomplete="tel" minlength="8" maxlength="30" required />
+            </label>
+            <label class="full-width">ご要望（任意）
+              <textarea id="notes" name="notes" maxlength="500" rows="4" placeholder="ご希望があればご記入ください"></textarea>
+            </label>
+          </div>
+          <p class="hint">同じ日時の予約枠は先着順です。送信後は内容を変更できません。</p>
+          <button id="submit-button" type="submit">予約を送信</button>
+          <p id="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
     </main>
+    <script type="module" src="./app.js"></script>
   </body>
 </html>

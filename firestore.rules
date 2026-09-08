@@ -2,8 +2,47 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // All application data is accessed through trusted server-side functions
-    // until product-specific client authorization rules are implemented.
+    function isValidReservation(slotId) {
+      return request.resource.data.keys().hasAll([
+               "slotId", "date", "time", "guestCount", "customerName",
+               "email", "phone", "notes", "status", "createdAt"
+             ]) &&
+             request.resource.data.keys().hasOnly([
+               "slotId", "date", "time", "guestCount", "customerName",
+               "email", "phone", "notes", "status", "createdAt"
+             ]) &&
+             request.resource.data.slotId == slotId &&
+             slotId.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-2][0-9]-[0-5][0-9]$") &&
+             request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") &&
+             request.resource.data.time in [
+               "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"
+             ] &&
+             request.resource.data.guestCount is int &&
+             request.resource.data.guestCount >= 1 &&
+             request.resource.data.guestCount <= 12 &&
+             request.resource.data.customerName is string &&
+             request.resource.data.customerName.size() >= 1 &&
+             request.resource.data.customerName.size() <= 80 &&
+             request.resource.data.email is string &&
+             request.resource.data.email.matches("^.+@.+\\..+$") &&
+             request.resource.data.email.size() <= 254 &&
+             request.resource.data.phone is string &&
+             request.resource.data.phone.size() >= 8 &&
+             request.resource.data.phone.size() <= 30 &&
+             request.resource.data.notes is string &&
+             request.resource.data.notes.size() <= 500 &&
+             request.resource.data.status == "pending" &&
+             request.resource.data.createdAt == request.time;
+    }
+
+    // The document ID is a fixed date-and-time slot. A slot can be created
+    // once, which prevents a second public form submission from taking it.
+    match /reservationSlots/{slotId} {
+      allow create: if resource == null && isValidReservation(slotId);
+      allow read, update, delete: if false;
+    }
+
+    // The public form has no access to other collections.
     match /{document=**} {
       allow read, write: if false;
     }
