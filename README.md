@@ -2,8 +2,7 @@
 
 This repository is initialized for the Firebase project `yamazoe-halls-staging`.
 It uses Firebase Hosting, Cloud Functions for Firebase (2nd generation),
-Cloud Firestore, and Cloud Storage. Functions run in `asia-northeast1` on
-Node.js 22.
+Cloud Firestore. Functions run in `asia-northeast1` on Node.js 22.
 
 ## Configuration model
 
@@ -58,11 +57,11 @@ Deploy the staging configuration:
 
 ```sh
 firebase deploy --project yamazoe-halls-staging \
-  --only functions,hosting,firestore:rules,firestore:indexes,storage
+  --only functions,hosting,firestore:rules,firestore:indexes
 ```
 
-The initial rules deny all direct Firestore and Storage access. Open narrowly
-scoped, tested client rules only after the application’s authorization model is
+The initial Firestore rules deny all direct access. Open narrowly scoped,
+tested client rules only after the application’s authorization model is
 defined. After deployment, verify `https://yamazoe-halls-staging.web.app/api/health`.
 
 ## Local development

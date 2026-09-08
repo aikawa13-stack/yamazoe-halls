@@ -8,8 +8,8 @@
   "scripts": {
     "build": "tsc",
     "build:check": "tsc --noEmit",
-    "serve": "npm run build && firebase emulators:start --only functions,firestore,hosting,storage",
-    "deploy": "firebase deploy --only functions,hosting,firestore:rules,firestore:indexes,storage",
+    "serve": "npm run build && firebase emulators:start --only functions,firestore,hosting",
+    "deploy": "firebase deploy --only functions,hosting,firestore:rules,firestore:indexes",
     "logs": "firebase functions:log"
   },
   "dependencies": {
