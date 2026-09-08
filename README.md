@@ -35,6 +35,26 @@
 
 館・施設（部屋）・利用日・利用区分は公開フォームの固定枠IDと一致させるため、管理画面からは変更できません。変更が必要な場合は、既存予約を削除して新しい枠を作成してください。
 
+### Staff account bootstrap
+
+`scripts/bootstrap-staff.mjs` は、館長と各館職員のメール／パスワードアカウントを作成し、次のカスタムクレームを付与します。
+
+| Account | Role | Facility |
+| --- | --- | --- |
+| `kouminkanchou@yamazoe.local` | `manager` | `all` |
+| `higashiyama1@yamazoe.local` | `staff` | `higashiyama` |
+| `hatano1@yamazoe.local` | `staff` | `hatano` |
+| `toyohara1@yamazoe.local` | `staff` | `toyohara` |
+
+信頼できる管理者環境で、Firebase Admin SDK とサービスアカウント認証を用意してから実行します。`STAFF_INITIAL_PASSWORD` は Firebase の要件により6文字以上が必要です。クレームの反映後、職員は一度ログアウトして再ログインしてください。
+
+```sh
+npm install --no-save firebase-admin
+GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json \
+STAFF_INITIAL_PASSWORD='6文字以上の初期パスワード' \
+node scripts/bootstrap-staff.mjs
+```
+
 ## Deploy
 
 Firebase CLI で次を実行します。

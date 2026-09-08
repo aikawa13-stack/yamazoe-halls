@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, getIdTokenResult, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-import { collection, collectionGroup, deleteDoc, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, collectionGroup, deleteDoc, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { facilityLabel, roomLabel, roomsFor, slotLabel } from "./config.js";
 
 const firebaseConfig = {
@@ -28,6 +28,7 @@ let selectedId = null;
 let reservations = new Map();
 let stopListening = null;
 let stopClosedDays = null;
+let accessFacility = null;
 
 function message(target, text, type = "") { target.textContent = text; target.className = type; }
 
@@ -71,7 +72,9 @@ function renderList() {
 
 function startReservations() {
   stopListening?.();
-  const reservationsQuery = query(collection(db, "reservations"), orderBy("date"), orderBy("slot"));
+  const reservationsQuery = accessFacility === "all"
+    ? query(collection(db, "reservations"), orderBy("date"), orderBy("slot"))
+    : query(collection(db, "reservations"), where("facility", "==", accessFacility), orderBy("date"), orderBy("slot"));
   stopListening = onSnapshot(reservationsQuery, (snapshot) => {
     reservations = new Map(snapshot.docs.map((item) => [item.id, item.data()]));
     if (selectedId && !reservations.has(selectedId)) { selectedId = null; editForm.hidden = true; emptyDetail.hidden = false; }
@@ -99,7 +102,9 @@ function renderClosedDays(days) {
 
 function startClosedDays() {
   stopClosedDays?.();
-  const closedDaysQuery = query(collectionGroup(db, "dates"), orderBy("date"));
+  const closedDaysQuery = accessFacility === "all"
+    ? query(collectionGroup(db, "dates"), orderBy("date"))
+    : query(collection(db, "closed_days", accessFacility, "dates"), orderBy("date"));
   stopClosedDays = onSnapshot(closedDaysQuery, (snapshot) => renderClosedDays(snapshot.docs), () => {
     message(closedDayStatus, "休館日一覧を取得できません。職員権限を確認してください。", "error");
   });
@@ -166,11 +171,19 @@ onAuthStateChanged(auth, async (user) => {
   if (!user) { loginPanel.hidden = false; adminPanel.hidden = true; return; }
   try {
     const token = await getIdTokenResult(user, true);
-    if (token.claims.admin !== true) {
+    const role = token.claims.role;
+    const facility = token.claims.facility;
+    const validManager = role === "manager" && facility === "all";
+    const validStaff = role === "staff" && ["higashiyama", "hatano", "toyohara"].includes(facility);
+    if (token.claims.admin !== true || (!validManager && !validStaff)) {
       await signOut(auth);
-      message(loginStatus, "このアカウントには職員権限がありません。", "error");
+      message(loginStatus, "このアカウントには有効な職員権限がありません。", "error");
       return;
     }
+    accessFacility = facility;
+    const closedDayFacility = document.querySelector("#closed-day-facility");
+    closedDayFacility.value = facility === "all" ? "higashiyama" : facility;
+    closedDayFacility.disabled = facility !== "all";
     loginPanel.hidden = true; adminPanel.hidden = false; startReservations(); startClosedDays();
   } catch {
     await signOut(auth);
