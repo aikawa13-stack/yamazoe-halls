@@ -12,30 +12,21 @@
       <header class="intro" aria-labelledby="page-title">
         <p class="eyebrow">公民館利用予約</p>
         <h1 id="page-title">山添村公民館予約フォーム</h1>
-        <p class="lead">東山・波多野・豊原の公民館の空き状況を確認し、利用予約をお申し込みいただけます。</p>
+        <p class="lead">館内の施設（部屋）ごとの空き状況を確認し、利用予約をお申し込みいただけます。</p>
       </header>
 
       <section class="card availability-card" aria-labelledby="availability-title">
-        <div class="section-heading">
-          <div><p class="eyebrow">AVAILABILITY</p><h2 id="availability-title">予約状況</h2></div>
-          <label class="facility-picker">館を選択
-            <select id="availability-facility">
-              <option value="東山" selected>東山</option>
-              <option value="波多野">波多野</option>
-              <option value="豊原">豊原</option>
-            </select>
-          </label>
+        <div class="section-heading"><div><p class="eyebrow">AVAILABILITY</p><h2 id="availability-title">予約状況</h2></div></div>
+        <div class="room-selectors">
+          <label>館<select id="availability-facility"><option value="higashiyama" selected>東山</option><option value="hatano">波多野</option><option value="toyohara">豊原</option></select></label>
+          <label>施設（部屋）<select id="availability-room" required></select></label>
         </div>
         <div class="calendar-controls">
           <button id="previous-month" class="secondary" type="button" aria-label="前の月">前月</button>
           <h3 id="calendar-month"></h3>
           <button id="next-month" class="secondary" type="button" aria-label="次の月">次月</button>
         </div>
-        <div class="availability-legend" aria-label="空き状況の凡例">
-          <span><i class="status-dot available"></i>空き</span>
-          <span><i class="status-dot pending"></i>受付中</span>
-          <span><i class="status-dot closed"></i>停止</span>
-        </div>
+        <div class="availability-legend" aria-label="空き状況の凡例"><span><i class="status-dot available"></i>空き</span><span><i class="status-dot pending"></i>受付中</span><span><i class="status-dot closed"></i>停止</span></div>
         <div id="calendar" class="calendar" role="grid" aria-labelledby="calendar-month"></div>
         <p id="availability-status" role="status" aria-live="polite"></p>
       </section>
@@ -46,41 +37,17 @@
       </section>
 
       <section id="booking" class="card" aria-labelledby="form-title">
-        <p class="eyebrow">BOOKING</p>
-        <h2 id="form-title">予約内容を入力</h2>
+        <p class="eyebrow">BOOKING</p><h2 id="form-title">予約内容を入力</h2>
         <form id="reservation-form" novalidate>
           <div class="form-grid">
-            <label>利用施設
-              <select id="facility" name="facility" required>
-                <option value="東山" selected>東山</option>
-                <option value="波多野">波多野</option>
-                <option value="豊原">豊原</option>
-              </select>
-            </label>
-            <label>利用日
-              <input id="date" name="date" type="date" required />
-            </label>
-            <label>利用区分
-              <select id="slot" name="slot" required>
-                <option value="" selected disabled>選択してください</option>
-                <option value="午前">午前（9:00–12:00）</option>
-                <option value="午後">午後（13:00–17:00）</option>
-                <option value="夜間">夜間（18:00–21:00）</option>
-                <option value="全日">全日（9:00–21:00）</option>
-              </select>
-            </label>
-            <label>氏名
-              <input id="customer-name" name="customerName" autocomplete="name" maxlength="80" required />
-            </label>
-            <label>電話番号
-              <input id="phone" name="phone" type="tel" autocomplete="tel" minlength="8" maxlength="30" required />
-            </label>
-            <label class="full-width">利用目的
-              <textarea id="purpose" name="purpose" maxlength="200" rows="3" required></textarea>
-            </label>
-            <label class="full-width">備考（任意）
-              <textarea id="notes" name="notes" maxlength="500" rows="4"></textarea>
-            </label>
+            <label>館<select id="facility" name="facility" required><option value="higashiyama" selected>東山</option><option value="hatano">波多野</option><option value="toyohara">豊原</option></select></label>
+            <label>施設（部屋）<select id="room" name="room" required></select></label>
+            <label>利用日<input id="date" name="date" type="date" required /></label>
+            <label>利用区分<select id="slot" name="slot" required><option value="" selected disabled>選択してください</option><option value="morning">午前（9:00–12:00）</option><option value="afternoon">午後（13:00–17:00）</option><option value="night">夜間（18:00–21:00）</option><option value="all_day">全日（9:00–21:00）</option></select></label>
+            <label>氏名<input id="customer-name" name="customerName" autocomplete="name" maxlength="80" required /></label>
+            <label>電話番号<input id="phone" name="phone" type="tel" autocomplete="tel" minlength="8" maxlength="30" required /></label>
+            <label class="full-width">利用目的<textarea id="purpose" name="purpose" maxlength="200" rows="3" required></textarea></label>
+            <label class="full-width">備考（任意）<textarea id="notes" name="notes" maxlength="500" rows="4"></textarea></label>
           </div>
           <button id="submit-button" type="submit">予約を送信</button>
           <p id="form-status" role="status" aria-live="polite"></p>

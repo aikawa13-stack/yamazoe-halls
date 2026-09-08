@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, getIdTokenResult, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 import { collection, collectionGroup, deleteDoc, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { facilityLabel, roomLabel, roomsFor, slotLabel } from "./config.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB4RYPAvnwets8LI6Vefnuxc_eC7ftymig",
@@ -30,11 +31,17 @@ let stopClosedDays = null;
 
 function message(target, text, type = "") { target.textContent = text; target.className = type; }
 
+function fillRooms(select, facility, selected = "") {
+  select.replaceChildren();
+  for (const room of roomsFor(facility)) select.add(new Option(room.label, room.id, false, room.id === selected));
+}
+
 function selectReservation(id) {
   const reservation = reservations.get(id);
   if (!reservation) return;
   selectedId = id;
   document.querySelector("#edit-facility").value = reservation.facility;
+  fillRooms(document.querySelector("#edit-room"), reservation.facility, reservation.room);
   document.querySelector("#edit-date").value = reservation.date;
   document.querySelector("#edit-slot").value = reservation.slot;
   document.querySelector("#edit-name").value = reservation.customerName;
@@ -55,7 +62,7 @@ function renderList() {
     item.type = "button";
     item.className = `reservation-item${id === selectedId ? " selected" : ""}`;
     item.addEventListener("click", () => selectReservation(id));
-    const date = document.createElement("strong"); date.textContent = `${reservation.date} ${reservation.slot} · ${reservation.facility}`;
+    const date = document.createElement("strong"); date.textContent = `${reservation.date} ${slotLabel(reservation.slot)} · ${facilityLabel(reservation.facility)} ${roomLabel(reservation.facility, reservation.room)}`;
     const details = document.createElement("span"); details.textContent = `${reservation.customerName} · ${reservation.purpose} · ${reservation.status}`;
     item.append(date, details);
     list.append(item);
@@ -79,7 +86,7 @@ function renderClosedDays(days) {
   for (const day of days) {
     const item = document.createElement("div");
     item.className = "closed-day-item";
-    const label = document.createElement("span"); label.textContent = `${day.data().facility} · ${day.data().date}`;
+    const label = document.createElement("span"); label.textContent = `${facilityLabel(day.data().facility)} · ${day.data().date}`;
     const button = document.createElement("button"); button.className = "secondary"; button.type = "button"; button.textContent = "解除";
     button.addEventListener("click", async () => {
       if (!window.confirm(`${label.textContent} を休館日から解除しますか？`)) return;
@@ -133,7 +140,7 @@ editForm.addEventListener("submit", async (event) => {
       status,
     });
     batch.set(doc(db, "availability", selectedId), {
-      slotId: selectedId, facility: reservation.facility, date: reservation.date, slot: reservation.slot, status,
+      slotId: selectedId, facility: reservation.facility, room: reservation.room, date: reservation.date, slot: reservation.slot, status,
     }, { merge: true });
     await batch.commit();
     message(adminStatus, "予約内容を保存しました。", "success");
