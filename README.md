@@ -2,6 +2,8 @@
 
 `yamazoe-halls-staging` の Firebase Hosting と Cloud Firestore だけで動作する、ログイン不要の予約フォームです。Cloud Functions、Gmail、Google Calendar、Cloud Storage は使用しません。
 
+公開ページの表題は「山添村公民館予約フォーム」です。利用施設（東山・波多野・豊原）、利用日、利用区分（午前・午後・夜間・全日）、氏名、電話番号、利用目的、備考（任意）を受け付けます。
+
 ## Reservation model
 
 予約は `reservations/{facility}_{date}_{slot}` に1件ずつ保存されます。たとえば東山の午前枠は `東山_2026-09-08_午前` です。同じ施設・利用日・利用区分は同一ドキュメントIDとなり、Firestore ルールは新規作成だけを許可するため、最初に送信された予約だけが受け付けられます。
