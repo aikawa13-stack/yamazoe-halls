@@ -6,18 +6,18 @@
 
 トップページには館・施設（部屋）の選択、月間カレンダー、日別の利用区分一覧を表示します。青は空き、灰色は受付中、赤は停止です。公開側には個人情報を含まない `availability` コレクションだけを公開し、空き枠から同一ページ内の予約フォームへ進めます。
 
-初期の部屋マスタは、東山（大会議室・小会議室・和室・調理室）、波多野（大会議室・小会議室・和室）、豊原（大会議室・小会議室・和室）です。
+部屋マスタは、東山（１階 大会議室・１階 料理実習室・２階 和室（大）・２階 和室（小）・２階 研修室）、波多野公民館（文化伝習館）（研修室）、豊原（大研修室・研修室・料理実習室）です。東山のロビー・図書室は予約対象に含めません。
 
 休館日は `closed_days/{facility}/dates/{date}` で管理します。Firestore の文書パスはコレクションと文書を交互に置く必要があるため、`dates` サブコレクションを使用しています。休館日データは予約状況より優先され、公開カレンダーと利用区分一覧に赤の「停止」として表示されます。職員画面から設定・解除できます。
 
 ## Reservation model
 
-予約は `reservations/{facility}_{room}_{date}_{slot}` に1件ずつ保存されます。たとえば東山公民館の大会議室・午前枠は `higashiyama_large_hall_2026-09-09_morning` です。同じ館・部屋・利用日・利用区分は同一ドキュメントIDとなり、Firestore ルールは新規作成だけを許可するため、最初に送信された予約だけが受け付けられます。
+予約は `reservations/{facility}_{room}_{date}_{slot}` に1件ずつ保存されます。たとえば東山公民館の１階 大会議室・午前枠は `higashiyama_higashiyama_1f_large_meeting_room_2026-09-09_morning` です。同じ館・部屋・利用日・利用区分は同一ドキュメントIDとなり、Firestore ルールは新規作成だけを許可するため、最初に送信された予約だけが受け付けられます。
 
 | Field | Description |
 | --- | --- |
 | `slotId` | 館・部屋・利用日・利用区分から生成される予約枠ID |
-| `facility`, `room` | 館ID・部屋ID（例: `higashiyama`, `large_hall`） |
+| `facility`, `room` | 館ID・部屋ID（例: `higashiyama`, `higashiyama_1f_large_meeting_room`） |
 | `date`, `slot` | 利用日・利用区分ID（例: `morning`） |
 | `customerName`, `phone`, `purpose`, `notes` | お客様入力 |
 | `status` | 初期値は `pending` |

@@ -7,8 +7,15 @@ service cloud.firestore {
     }
 
     function isValidRoom(facility, room) {
-      return (facility == "higashiyama" && room in ["large_hall", "small_meeting_room", "japanese_room", "kitchen"]) ||
-             (facility in ["hatano", "toyohara"] && room in ["large_hall", "small_meeting_room", "japanese_room"]);
+      return (facility == "higashiyama" && room in [
+               "higashiyama_1f_large_meeting_room", "higashiyama_1f_cooking_practice_room",
+               "higashiyama_2f_large_japanese_room", "higashiyama_2f_small_japanese_room",
+               "higashiyama_2f_training_room"
+             ]) ||
+             (facility == "hatano" && room == "hatano_training_room") ||
+             (facility == "toyohara" && room in [
+               "toyohara_large_training_room", "toyohara_training_room", "toyohara_cooking_practice_room"
+             ]);
     }
 
     function isValidReservation(slotId) {

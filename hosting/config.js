@@ -2,26 +2,25 @@ export const facilities = {
   higashiyama: {
     label: "東山",
     rooms: [
-      { id: "large_hall", label: "大会議室" },
-      { id: "small_meeting_room", label: "小会議室" },
-      { id: "japanese_room", label: "和室" },
-      { id: "kitchen", label: "調理室" },
+      { id: "higashiyama_1f_large_meeting_room", label: "１階 大会議室" },
+      { id: "higashiyama_1f_cooking_practice_room", label: "１階 料理実習室" },
+      { id: "higashiyama_2f_large_japanese_room", label: "２階 和室（大）" },
+      { id: "higashiyama_2f_small_japanese_room", label: "２階 和室（小）" },
+      { id: "higashiyama_2f_training_room", label: "２階 研修室" },
     ],
   },
   hatano: {
-    label: "波多野",
+    label: "波多野（文化伝習館）",
     rooms: [
-      { id: "large_hall", label: "大会議室" },
-      { id: "small_meeting_room", label: "小会議室" },
-      { id: "japanese_room", label: "和室" },
+      { id: "hatano_training_room", label: "研修室" },
     ],
   },
   toyohara: {
     label: "豊原",
     rooms: [
-      { id: "large_hall", label: "大会議室" },
-      { id: "small_meeting_room", label: "小会議室" },
-      { id: "japanese_room", label: "和室" },
+      { id: "toyohara_large_training_room", label: "大研修室" },
+      { id: "toyohara_training_room", label: "研修室" },
+      { id: "toyohara_cooking_practice_room", label: "料理実習室" },
     ],
   },
 };

@@ -34,7 +34,7 @@
         <section class="card closed-days-card" aria-labelledby="closed-days-title">
           <h2 id="closed-days-title">休館日管理</h2>
           <form id="closed-day-form" class="closed-day-form">
-            <label>館<select id="closed-day-facility" required><option value="higashiyama">東山</option><option value="hatano">波多野</option><option value="toyohara">豊原</option></select></label>
+            <label>館<select id="closed-day-facility" required><option value="higashiyama">東山</option><option value="hatano">波多野（文化伝習館）</option><option value="toyohara">豊原</option></select></label>
             <label>休館日<input id="closed-day-date" type="date" required /></label>
             <button type="submit">休館日に設定</button>
           </form>
@@ -46,7 +46,7 @@
           <section class="card" aria-labelledby="edit-title">
             <h2 id="edit-title">予約詳細</h2>
             <form id="edit-form" class="stack-form" hidden>
-              <label>館<select id="edit-facility" disabled><option value="higashiyama">東山</option><option value="hatano">波多野</option><option value="toyohara">豊原</option></select></label>
+              <label>館<select id="edit-facility" disabled><option value="higashiyama">東山</option><option value="hatano">波多野（文化伝習館）</option><option value="toyohara">豊原</option></select></label>
               <label>施設（部屋）<select id="edit-room" disabled></select></label>
               <label>利用日<input id="edit-date" type="date" readonly /></label>
               <label>利用区分<select id="edit-slot" disabled><option value="morning">午前（9:00–12:00）</option><option value="afternoon">午後（13:00–17:00）</option><option value="night">夜間（18:00–21:00）</option><option value="all_day">全日（9:00–21:00）</option></select></label>
