@@ -4,7 +4,7 @@
 
 ## Reservation model
 
-予約は `reservationSlots/{YYYY-MM-DD_HH-mm}` に1件ずつ保存されます。同じ日時は同一ドキュメントIDとなり、Firestore ルールは新規作成だけを許可するため、最初に送信された予約だけが受け付けられます。
+予約は `reservations/{YYYY-MM-DD_HH-mm}` に1件ずつ保存されます。同じ日時は同一ドキュメントIDとなり、Firestore ルールは新規作成だけを許可するため、最初に送信された予約だけが受け付けられます。
 
 | Field | Description |
 | --- | --- |
@@ -16,6 +16,14 @@
 | `createdAt` | Firestore サーバー時刻 |
 
 公開フォームは予約の作成だけが可能です。個人情報を含む予約データの閲覧、更新、削除は Firebase コンソールなどの管理者環境で行ってください。
+
+## Staff management
+
+`/admin.html` は職員用の管理画面です。Firebase Authentication のメール／パスワードでログインしたうえで、ID トークンに `admin: true` カスタムクレームがある職員だけが、予約一覧の閲覧・予約詳細の編集・削除を行えます。
+
+初回設定では、Firebase Console の Authentication でメール／パスワードのログイン方法を有効にし、職員アカウントを作成してください。次に、信頼された管理者環境から Firebase Admin SDK の `setCustomUserClaims(uid, { admin: true })` を実行して対象アカウントへ職員クレームを付与します。クレームの更新後は、その職員が再ログインして新しい ID トークンを取得する必要があります。
+
+予約日時は公開フォームの固定枠IDと一致させるため、管理画面からは変更できません。日時の変更が必要な場合は、既存予約を削除して新しい枠を作成してください。
 
 ## Deploy
 

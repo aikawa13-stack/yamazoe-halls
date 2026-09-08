@@ -2,6 +2,10 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
     function isValidReservation(slotId) {
       return request.resource.data.keys().hasAll([
                "slotId", "date", "time", "guestCount", "customerName",
@@ -37,9 +41,12 @@ service cloud.firestore {
 
     // The document ID is a fixed date-and-time slot. A slot can be created
     // once, which prevents a second public form submission from taking it.
-    match /reservationSlots/{slotId} {
-      allow create: if resource == null && isValidReservation(slotId);
-      allow read, update, delete: if false;
+    match /reservations/{slotId} {
+      // Public users may only create a valid, vacant time slot.
+      allow create: if request.auth == null && resource == null && isValidReservation(slotId);
+
+      // Staff access is available only to ID tokens carrying admin: true.
+      allow read, update, delete: if isAdmin();
     }
 
     // The public form has no access to other collections.

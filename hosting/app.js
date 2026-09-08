@@ -57,7 +57,7 @@ form.addEventListener("submit", async (event) => {
   setStatus("予約を送信しています…");
 
   try {
-    await setDoc(doc(db, "reservationSlots", id), reservation);
+    await setDoc(doc(db, "reservations", id), reservation);
     form.reset();
     setStatus("予約リクエストを受け付けました。内容を確認のうえご連絡します。", "success");
   } catch (error) {
