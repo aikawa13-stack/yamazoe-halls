@@ -4,14 +4,14 @@
 
 ## Reservation model
 
-予約は `reservations/{YYYY-MM-DD_HH-mm}` に1件ずつ保存されます。同じ日時は同一ドキュメントIDとなり、Firestore ルールは新規作成だけを許可するため、最初に送信された予約だけが受け付けられます。
+予約は `reservations/{facility}_{date}_{slot}` に1件ずつ保存されます。たとえば東山の午前枠は `東山_2026-09-08_午前` です。同じ施設・利用日・利用区分は同一ドキュメントIDとなり、Firestore ルールは新規作成だけを許可するため、最初に送信された予約だけが受け付けられます。
 
 | Field | Description |
 | --- | --- |
-| `slotId` | 日付と開始時間から生成される予約枠ID |
-| `date`, `time` | 利用日・開始時間 |
-| `guestCount` | 1–12名 |
-| `customerName`, `email`, `phone`, `notes` | お客様入力 |
+| `slotId` | 施設・利用日・利用区分から生成される予約枠ID |
+| `facility` | 東山・波多野・豊原 |
+| `date`, `slot` | 利用日・利用区分（午前・午後・夜間・全日） |
+| `customerName`, `phone`, `purpose`, `notes` | お客様入力 |
 | `status` | 初期値は `pending` |
 | `createdAt` | Firestore サーバー時刻 |
 
@@ -23,7 +23,7 @@
 
 初回設定では、Firebase Console の Authentication でメール／パスワードのログイン方法を有効にし、職員アカウントを作成してください。次に、信頼された管理者環境から Firebase Admin SDK の `setCustomUserClaims(uid, { admin: true })` を実行して対象アカウントへ職員クレームを付与します。クレームの更新後は、その職員が再ログインして新しい ID トークンを取得する必要があります。
 
-予約日時は公開フォームの固定枠IDと一致させるため、管理画面からは変更できません。日時の変更が必要な場合は、既存予約を削除して新しい枠を作成してください。
+利用施設・利用日・利用区分は公開フォームの固定枠IDと一致させるため、管理画面からは変更できません。変更が必要な場合は、既存予約を削除して新しい枠を作成してください。
 
 ## Deploy
 

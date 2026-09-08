@@ -30,12 +30,12 @@ function selectReservation(id) {
   const reservation = reservations.get(id);
   if (!reservation) return;
   selectedId = id;
+  document.querySelector("#edit-facility").value = reservation.facility;
   document.querySelector("#edit-date").value = reservation.date;
-  document.querySelector("#edit-time").value = reservation.time;
-  document.querySelector("#edit-guests").value = reservation.guestCount;
+  document.querySelector("#edit-slot").value = reservation.slot;
   document.querySelector("#edit-name").value = reservation.customerName;
-  document.querySelector("#edit-email").value = reservation.email;
   document.querySelector("#edit-phone").value = reservation.phone;
+  document.querySelector("#edit-purpose").value = reservation.purpose;
   document.querySelector("#edit-status").value = reservation.status;
   document.querySelector("#edit-notes").value = reservation.notes || "";
   editForm.hidden = false;
@@ -51,8 +51,8 @@ function renderList() {
     item.type = "button";
     item.className = `reservation-item${id === selectedId ? " selected" : ""}`;
     item.addEventListener("click", () => selectReservation(id));
-    const date = document.createElement("strong"); date.textContent = `${reservation.date} ${reservation.time}`;
-    const details = document.createElement("span"); details.textContent = `${reservation.customerName} · ${reservation.guestCount}名 · ${reservation.status}`;
+    const date = document.createElement("strong"); date.textContent = `${reservation.date} ${reservation.slot} · ${reservation.facility}`;
+    const details = document.createElement("span"); details.textContent = `${reservation.customerName} · ${reservation.purpose} · ${reservation.status}`;
     item.append(date, details);
     list.append(item);
   }
@@ -60,7 +60,7 @@ function renderList() {
 
 function startReservations() {
   stopListening?.();
-  const reservationsQuery = query(collection(db, "reservations"), orderBy("date"), orderBy("time"));
+  const reservationsQuery = query(collection(db, "reservations"), orderBy("date"), orderBy("slot"));
   stopListening = onSnapshot(reservationsQuery, (snapshot) => {
     reservations = new Map(snapshot.docs.map((item) => [item.id, item.data()]));
     if (selectedId && !reservations.has(selectedId)) { selectedId = null; editForm.hidden = true; emptyDetail.hidden = false; }
@@ -83,10 +83,9 @@ editForm.addEventListener("submit", async (event) => {
   if (!selectedId || !editForm.reportValidity()) return;
   try {
     await updateDoc(doc(db, "reservations", selectedId), {
-      guestCount: Number(document.querySelector("#edit-guests").value),
       customerName: document.querySelector("#edit-name").value.trim(),
-      email: document.querySelector("#edit-email").value.trim(),
       phone: document.querySelector("#edit-phone").value.trim(),
+      purpose: document.querySelector("#edit-purpose").value.trim(),
       notes: document.querySelector("#edit-notes").value.trim(),
       status: document.querySelector("#edit-status").value,
     });

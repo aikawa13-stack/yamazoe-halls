@@ -13,23 +13,18 @@ const form = document.querySelector("#reservation-form");
 const status = document.querySelector("#form-status");
 const submitButton = document.querySelector("#submit-button");
 const dateInput = document.querySelector("#date");
-const guestCount = document.querySelector("#guest-count");
 
 const today = new Date();
 today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
 dateInput.min = today.toISOString().slice(0, 10);
-
-for (let count = 1; count <= 12; count += 1) {
-  guestCount.add(new Option(`${count}名`, String(count)));
-}
 
 function setStatus(message, type = "") {
   status.textContent = message;
   status.className = type;
 }
 
-function slotId(date, time) {
-  return `${date}_${time.replace(":", "-")}`;
+function slotId(facility, date, slot) {
+  return `${facility}_${date}_${slot}`;
 }
 
 form.addEventListener("submit", async (event) => {
@@ -37,17 +32,18 @@ form.addEventListener("submit", async (event) => {
   if (!form.reportValidity()) return;
 
   const data = new FormData(form);
+  const facility = String(data.get("facility"));
   const date = String(data.get("date"));
-  const time = String(data.get("time"));
-  const id = slotId(date, time);
+  const slot = String(data.get("slot"));
+  const id = slotId(facility, date, slot);
   const reservation = {
     slotId: id,
+    facility,
     date,
-    time,
-    guestCount: Number(data.get("guestCount")),
+    slot,
     customerName: String(data.get("customerName")).trim(),
-    email: String(data.get("email")).trim(),
     phone: String(data.get("phone")).trim(),
+    purpose: String(data.get("purpose")).trim(),
     notes: String(data.get("notes")).trim(),
     status: "pending",
     createdAt: serverTimestamp(),
@@ -62,7 +58,7 @@ form.addEventListener("submit", async (event) => {
     setStatus("予約リクエストを受け付けました。内容を確認のうえご連絡します。", "success");
   } catch (error) {
     console.error("Reservation submission failed", error);
-    setStatus("この日時は受付できない可能性があります。別の日時を選んで再度お試しください。", "error");
+    setStatus("この施設・利用日・利用区分は受付できない可能性があります。別の予約枠を選んで再度お試しください。", "error");
   } finally {
     submitButton.disabled = false;
   }
