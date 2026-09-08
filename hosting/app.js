@@ -25,7 +25,9 @@ let selectedFacility = availabilityFacility.value;
 let selectedDate = localDate(new Date());
 let displayedMonth = new Date(`${selectedDate}T00:00:00`);
 let availability = new Map();
+let closedDays = new Set();
 let stopAvailability = null;
+let stopClosedDays = null;
 displayedMonth.setDate(1);
 dateInput.min = localDate(new Date());
 dateInput.value = selectedDate;
@@ -44,7 +46,10 @@ function monthBounds() {
   endDate.setDate(0);
   return [start, localDate(endDate)];
 }
-function statusFor(date, slot) { return availability.get(slotId(selectedFacility, date, slot))?.status || "available"; }
+function statusFor(date, slot) {
+  if (closedDays.has(date)) return "closed";
+  return availability.get(slotId(selectedFacility, date, slot))?.status || "available";
+}
 function dateStatus(date) {
   const states = slots.map(([slot]) => statusFor(date, slot));
   if (states.every((status) => status === "closed")) return "closed";
@@ -112,13 +117,26 @@ function renderSlots() {
 }
 function listenAvailability() {
   stopAvailability?.();
+  stopClosedDays?.();
   const [start, end] = monthBounds();
+  availability = new Map();
+  closedDays = new Set();
   setMessage(availabilityStatus, "空き状況を読み込んでいます…");
   const availabilityQuery = query(collection(db, "availability"), where("facility", "==", selectedFacility), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
   stopAvailability = onSnapshot(availabilityQuery, (snapshot) => {
     availability = new Map(snapshot.docs.map((item) => [item.id, item.data()]));
     renderCalendar(); renderSlots(); setMessage(availabilityStatus, "青は空き、灰色は受付中、赤は停止です。", "success");
   }, () => setMessage(availabilityStatus, "予約状況を取得できません。しばらくしてからお試しください。", "error"));
+  const closedDaysQuery = query(
+    collection(db, "closed_days", selectedFacility, "dates"),
+    where("date", ">=", start),
+    where("date", "<=", end),
+    orderBy("date"),
+  );
+  stopClosedDays = onSnapshot(closedDaysQuery, (snapshot) => {
+    closedDays = new Set(snapshot.docs.map((item) => item.data().date));
+    renderCalendar(); renderSlots(); setMessage(availabilityStatus, "青は空き、灰色は受付中、赤は停止です。", "success");
+  }, () => setMessage(availabilityStatus, "休館日情報を取得できません。しばらくしてからお試しください。", "error"));
 }
 
 availabilityFacility.addEventListener("change", () => { selectedFacility = availabilityFacility.value; formFacility.value = selectedFacility; listenAvailability(); });

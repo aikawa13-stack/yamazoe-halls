@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, getIdTokenResult, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-import { collection, doc, getFirestore, onSnapshot, orderBy, query, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, collectionGroup, deleteDoc, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB4RYPAvnwets8LI6Vefnuxc_eC7ftymig",
@@ -20,9 +20,13 @@ const adminStatus = document.querySelector("#admin-status");
 const list = document.querySelector("#reservation-list");
 const editForm = document.querySelector("#edit-form");
 const emptyDetail = document.querySelector("#empty-detail");
+const closedDayForm = document.querySelector("#closed-day-form");
+const closedDayStatus = document.querySelector("#closed-day-status");
+const closedDayList = document.querySelector("#closed-day-list");
 let selectedId = null;
 let reservations = new Map();
 let stopListening = null;
+let stopClosedDays = null;
 
 function message(target, text, type = "") { target.textContent = text; target.className = type; }
 
@@ -69,6 +73,31 @@ function startReservations() {
   }, () => message(adminStatus, "予約一覧を取得できません。権限設定を確認してください。", "error"));
 }
 
+function renderClosedDays(days) {
+  closedDayList.replaceChildren();
+  if (!days.length) { closedDayList.textContent = "設定済みの休館日はありません。"; return; }
+  for (const day of days) {
+    const item = document.createElement("div");
+    item.className = "closed-day-item";
+    const label = document.createElement("span"); label.textContent = `${day.data().facility} · ${day.data().date}`;
+    const button = document.createElement("button"); button.className = "secondary"; button.type = "button"; button.textContent = "解除";
+    button.addEventListener("click", async () => {
+      if (!window.confirm(`${label.textContent} を休館日から解除しますか？`)) return;
+      try { await deleteDoc(day.ref); message(closedDayStatus, "休館日を解除しました。", "success"); }
+      catch { message(closedDayStatus, "休館日を解除できません。職員権限を確認してください。", "error"); }
+    });
+    item.append(label, button); closedDayList.append(item);
+  }
+}
+
+function startClosedDays() {
+  stopClosedDays?.();
+  const closedDaysQuery = query(collectionGroup(db, "dates"), orderBy("date"));
+  stopClosedDays = onSnapshot(closedDaysQuery, (snapshot) => renderClosedDays(snapshot.docs), () => {
+    message(closedDayStatus, "休館日一覧を取得できません。職員権限を確認してください。", "error");
+  });
+}
+
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = document.querySelector("#login-email").value;
@@ -76,6 +105,17 @@ loginForm.addEventListener("submit", async (event) => {
   message(loginStatus, "ログインしています…");
   try { await signInWithEmailAndPassword(auth, email, password); }
   catch { message(loginStatus, "メールアドレスまたはパスワードを確認してください。", "error"); }
+});
+
+closedDayForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!closedDayForm.reportValidity()) return;
+  const facility = document.querySelector("#closed-day-facility").value;
+  const date = document.querySelector("#closed-day-date").value;
+  try {
+    await setDoc(doc(db, "closed_days", facility, "dates", date), { facility, date, createdAt: serverTimestamp() });
+    message(closedDayStatus, "休館日に設定しました。", "success");
+  } catch { message(closedDayStatus, "休館日を設定できません。職員権限を確認してください。", "error"); }
 });
 
 editForm.addEventListener("submit", async (event) => {
@@ -115,7 +155,7 @@ document.querySelector("#delete-reservation").addEventListener("click", async ()
 document.querySelector("#sign-out").addEventListener("click", () => signOut(auth));
 
 onAuthStateChanged(auth, async (user) => {
-  stopListening?.(); stopListening = null; selectedId = null;
+  stopListening?.(); stopListening = null; stopClosedDays?.(); stopClosedDays = null; selectedId = null;
   if (!user) { loginPanel.hidden = false; adminPanel.hidden = true; return; }
   try {
     const token = await getIdTokenResult(user, true);
@@ -124,7 +164,7 @@ onAuthStateChanged(auth, async (user) => {
       message(loginStatus, "このアカウントには職員権限がありません。", "error");
       return;
     }
-    loginPanel.hidden = true; adminPanel.hidden = false; startReservations();
+    loginPanel.hidden = true; adminPanel.hidden = false; startReservations(); startClosedDays();
   } catch {
     await signOut(auth);
     message(loginStatus, "職員権限を確認できません。もう一度ログインしてください。", "error");

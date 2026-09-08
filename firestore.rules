@@ -51,6 +51,10 @@ service cloud.firestore {
              request.resource.data.createdAt == request.time;
     }
 
+    function isClosedDay(facility, date) {
+      return exists(/databases/$(database)/documents/closed_days/$(facility)/dates/$(date));
+    }
+
     // The document ID fixes the facility, date, and usage category. A slot
     // can be created once, which prevents a duplicate public submission.
     match /reservations/{slotId} {
@@ -58,6 +62,7 @@ service cloud.firestore {
       // availability record. This keeps reservation details private.
       allow create: if request.auth == null && resource == null &&
         isValidReservation(slotId) &&
+        !isClosedDay(request.resource.data.facility, request.resource.data.date) &&
         getAfter(/databases/$(database)/documents/availability/$(slotId)).data.slotId == slotId;
 
       // Staff access is available only to ID tokens carrying admin: true.
@@ -72,6 +77,12 @@ service cloud.firestore {
         getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.slotId == slotId &&
         getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.status == "pending");
       allow update, delete: if isAdmin();
+    }
+
+    match /closed_days/{facility}/dates/{date} {
+      // A closure contains no personal data and is used by the public calendar.
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
     }
 
     // The public form has no access to other collections.
