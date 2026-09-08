@@ -16,6 +16,7 @@
     }
   ],
   "hosting": {
+    "site": "yamazoe-halls-staging",
     "public": "hosting",
     "ignore": [
       "firebase.json",
