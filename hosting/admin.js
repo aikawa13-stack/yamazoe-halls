@@ -21,6 +21,7 @@ const adminStatus = document.querySelector("#admin-status");
 const managerPendingSummary = document.querySelector("#manager-pending-summary");
 const list = document.querySelector("#reservation-list");
 const pendingReservationCount = document.querySelector("#pending-reservation-count");
+const reservationListSection = document.querySelector("#reservation-list-section");
 const editForm = document.querySelector("#edit-form");
 const emptyDetail = document.querySelector("#empty-detail");
 const closedDayTemplateForm = document.querySelector("#closed-day-template-form");
@@ -84,6 +85,16 @@ function reservationId(facility, room, date, slot) { return `${facility}_${room}
 function reservationStatusLabel(status) {
   return ({ pending: "受付中", confirmed: "確定", canceled: "取消済", closed: "停止" })[status] || status;
 }
+function reservationCreatedAtMillis(reservation) {
+  return reservation.createdAt?.toMillis?.() || Number.MAX_SAFE_INTEGER;
+}
+function reservationListSort(left, right) {
+  const priority = { pending: 0, confirmed: 1, canceled: 2, closed: 3 };
+  const priorityDifference = (priority[left.status] ?? 4) - (priority[right.status] ?? 4);
+  if (priorityDifference) return priorityDifference;
+  if (left.status === "pending") return reservationCreatedAtMillis(left) - reservationCreatedAtMillis(right);
+  return `${left.date}_${left.slot}`.localeCompare(`${right.date}_${right.slot}`);
+}
 function validateStaffPhone() {
   const normalized = staffPhone.value.replace(/\D/g, "");
   if (staffPhone.value !== normalized) staffPhone.value = normalized;
@@ -126,6 +137,8 @@ function renderList() {
     const item = document.createElement("button");
     item.type = "button";
     item.className = `reservation-item is-${reservation.status}${id === selectedId ? " selected" : ""}`;
+    item.dataset.reservationId = id;
+    if (reservation.status === "pending") item.dataset.pendingReservation = "true";
     item.addEventListener("click", () => selectReservation(id));
     const date = document.createElement("strong"); date.textContent = `${reservation.date} ${slotLabel(reservation.slot)} · ${facilityLabel(reservation.facility)} ${roomLabel(reservation.facility, reservation.room)}`;
     const details = document.createElement("span"); details.className = "reservation-item-details";
@@ -137,15 +150,29 @@ function renderList() {
   }
 }
 
+function scrollToOldestPendingReservation() {
+  const target = list.querySelector('[data-pending-reservation="true"]');
+  if (!target) return;
+  reservationListSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  target.focus({ preventScroll: true });
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 function startReservations() {
   stopListening?.();
-  const reservationsQuery = query(collection(db, "reservations"), where("facility", "==", adminFacility.value), orderBy("date"), orderBy("slot"));
+  const reservationsQuery = accessFacility === "all"
+    ? query(collection(db, "reservations"))
+    : query(collection(db, "reservations"), where("facility", "==", adminFacility.value), orderBy("date"), orderBy("slot"));
   stopListening = onSnapshot(reservationsQuery, (snapshot) => {
-    reservations = new Map(snapshot.docs.map((item) => [item.id, item.data()]));
+    const entries = snapshot.docs.map((item) => [item.id, item.data()]);
+    // Keep the first pending card deterministic for the quick-navigation labels.
+    // Managers also use this merged ordering across all three facilities.
+    entries.sort(([, left], [, right]) => reservationListSort(left, right));
+    reservations = new Map(entries);
     if (selectedId && !reservations.has(selectedId)) { selectedId = null; editForm.hidden = true; emptyDetail.hidden = false; }
     renderList();
     const pendingCount = [...reservations.values()].filter((reservation) => reservation.status === "pending").length;
-    message(adminStatus, pendingCount ? `${facilityLabel(adminFacility.value)}の予約を ${pendingCount} 件受付中です。` : "");
+    message(adminStatus, accessFacility === "all" ? "" : pendingCount ? `${facilityLabel(adminFacility.value)}の予約を ${pendingCount} 件受付中です。` : "");
   }, () => message(adminStatus, "予約一覧を取得できません。権限設定を確認してください。", "error"));
 }
 
@@ -158,8 +185,11 @@ function renderManagerPendingSummary(pendingReservations) {
   for (const facility of facilities) {
     const count = counts.get(facility);
     if (!count) continue;
-    const line = document.createElement("p");
+    const line = document.createElement("button");
+    line.type = "button";
+    line.className = "manager-pending-link";
     line.textContent = `${facilityLabel(facility)}　受付中：${count}件`;
+    line.addEventListener("click", scrollToOldestPendingReservation);
     managerPendingSummary.append(line);
   }
   managerPendingSummary.hidden = !managerPendingSummary.childElementCount;
@@ -603,6 +633,7 @@ document.querySelector("#delete-reservation").addEventListener("click", async ()
 
 document.querySelector("#sign-out").addEventListener("click", () => signOut(auth));
 staffPhone.addEventListener("input", validateStaffPhone);
+pendingReservationCount.addEventListener("click", scrollToOldestPendingReservation);
 
 const currentMonth = localDate(new Date()).slice(0, 7);
 closedDaysMonth.value = currentMonth;

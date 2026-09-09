@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260909-closure-month-ui" />
+    <link rel="stylesheet" href="./styles.css?v=20260909-pending-navigation" />
     <title>Yamazoe Halls | 職員管理</title>
   </head>
   <body>
@@ -137,9 +137,9 @@
           </form>
         </section>
         <div class="admin-layout">
-          <section class="card reservation-list-wrap" aria-label="予約一覧">
+          <section id="reservation-list-section" class="card reservation-list-wrap" aria-label="予約一覧">
             <div class="reservation-list-heading">
-              <div><h2>予約一覧</h2><p id="pending-reservation-count" class="pending-reservation-count" hidden></p></div>
+              <div><h2>予約一覧</h2><button id="pending-reservation-count" class="pending-reservation-count" type="button" hidden></button></div>
               <button id="open-staff-reservation" type="button">職員予約の新規作成</button>
             </div>
             <div id="reservation-list"></div>
@@ -167,6 +167,6 @@
     <div id="admin-operation-modal" class="admin-operation-modal" aria-live="polite" aria-atomic="true" hidden>
       <div class="admin-operation-modal__panel" role="status"></div>
     </div>
-    <script type="module" src="./admin.js?v=20260909-closure-month-ui"></script>
+    <script type="module" src="./admin.js?v=20260909-pending-navigation"></script>
   </body>
 </html>
