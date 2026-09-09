@@ -41,6 +41,7 @@ const staffReservationStatus = document.querySelector("#staff-reservation-status
 const staffFacility = document.querySelector("#staff-facility");
 const staffRoom = document.querySelector("#staff-room");
 const staffDate = document.querySelector("#staff-date");
+const adminToast = document.querySelector("#admin-toast");
 let selectedId = null;
 let reservations = new Map();
 let stopListening = null;
@@ -50,8 +51,24 @@ let accessFacility = null;
 let configuredClosedDays = new Map();
 let closurePreview = new Map();
 let adminAvailability = new Map();
+let toastTimer = null;
+let toastHideTimer = null;
 
-function message(target, text, type = "") { target.textContent = text; target.className = type; }
+function showToast(text, type = "success") {
+  clearTimeout(toastTimer); clearTimeout(toastHideTimer);
+  adminToast.textContent = text;
+  adminToast.className = `admin-toast ${type}`;
+  adminToast.hidden = false;
+  requestAnimationFrame(() => adminToast.classList.add("is-visible"));
+  toastTimer = setTimeout(() => {
+    adminToast.classList.remove("is-visible");
+    toastHideTimer = setTimeout(() => { adminToast.hidden = true; }, 250);
+  }, 2800);
+}
+function message(target, text, type = "", toastText = text) {
+  target.textContent = text; target.className = type;
+  if (type === "success" || type === "error") showToast(toastText, type);
+}
 function reservationId(facility, room, date, slot) { return `${facility}_${room}_${date}_${slot}`; }
 
 function fillRooms(select, facility, selected = "") {
@@ -244,13 +261,13 @@ function renderAdminCalendar() {
         if (!window.confirm(`${date} を休館日から削除し、開館扱いにしますか？`)) return;
         try {
           await deleteClosedDay(configuredClosedDays.get(closureId(facilityId, date)));
-          message(closedDayStatus, "休館日を削除し、開館扱いにしました。", "success");
+          message(closedDayStatus, "休館日を削除し、開館扱いとしました。", "success");
         } catch { message(closedDayStatus, "休館日を削除できません。職員権限を確認してください。", "error"); }
       } else {
         if (!window.confirm(`${date} を休館日に設定しますか？`)) return;
         try {
           await addClosedDay(facilityId, date);
-          message(closedDayStatus, "休館日に設定しました。", "success");
+          message(closedDayStatus, "休館日として登録しました。", "success");
         } catch { message(closedDayStatus, "休館日を設定できません。職員権限を確認してください。", "error"); }
       }
     });
@@ -288,7 +305,7 @@ function renderClosedDays(days) {
       if (!window.confirm(`${data.date} を休館日から削除し、開館扱いにしますか？`)) return;
       try {
         await deleteClosedDay(day);
-        message(closedDayStatus, "休館日を削除し、開館扱いにしました。", "success");
+        message(closedDayStatus, "休館日を削除し、開館扱いとしました。", "success");
       } catch { message(closedDayStatus, "休館日を削除できません。職員権限を確認してください。", "error"); }
     });
     item.append(label, button); closedDayList.append(item);
@@ -377,7 +394,7 @@ saveClosedDays.addEventListener("click", async () => {
     }
     await batch.commit();
     closurePreview = new Map(); renderPreview();
-    message(closedDayStatus, `${entries.length}日分の休館日を登録しました。`, "success");
+    message(closedDayStatus, `${entries.length}日分の休館日を登録しました。`, "success", "休館日として登録しました。");
   } catch { message(closedDayStatus, "休館日を登録できません。職員権限を確認してください。", "error"); }
   finally { renderPreview(); }
 });
@@ -443,7 +460,7 @@ staffReservationForm.addEventListener("submit", async (event) => {
     addReservationAudit(batch, "create", reservation, id);
     await batch.commit();
     staffReservationForm.reset(); prepareStaffReservationForm();
-    message(staffReservationStatus, "確定予約を登録しました。予約一覧と公開カレンダーへ反映されます。", "success");
+    message(staffReservationStatus, "確定予約を登録しました。予約一覧と公開カレンダーへ反映されます。", "success", "職員予約を作成しました。");
   } catch (error) {
     console.error("Staff reservation submission failed", error);
     message(staffReservationStatus, "予約を登録できません。競合または職員権限を確認してください。", "error");
@@ -469,7 +486,7 @@ editForm.addEventListener("submit", async (event) => {
     }, { merge: true });
     addReservationAudit(batch, "update", reservation, selectedId);
     await batch.commit();
-    message(adminStatus, "予約内容を保存しました。", "success");
+    message(adminStatus, "予約内容を保存しました。", "success", reservation.isStaffReservation ? "職員予約を更新しました。" : "予約内容を保存しました。");
   } catch { message(adminStatus, "保存できません。職員権限を確認してください。", "error"); }
 });
 
