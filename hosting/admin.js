@@ -54,7 +54,6 @@ const adminOperationModalPanel = document.querySelector("#admin-operation-modal 
 let selectedId = null;
 let reservations = new Map();
 let stopListening = null;
-let stopPendingSummary = null;
 let stopClosedDays = null;
 let stopAdminAvailability = null;
 let accessFacility = null;
@@ -179,12 +178,27 @@ function startReservations() {
     reservations = new Map(entries);
     if (selectedId && !reservations.has(selectedId)) { selectedId = null; editForm.hidden = true; emptyDetail.hidden = false; }
     renderList();
+    renderManagerPendingSummary(reservations.values());
     const pendingCount = pendingReservationsInAccessScope().length;
     message(adminStatus, accessFacility === "all" ? "" : pendingCount ? `${facilityLabel(accessFacility)}の予約を ${pendingCount} 件受付中です。` : "");
   }, () => message(adminStatus, "予約一覧を取得できません。権限設定を確認してください。", "error"));
 }
 
-function renderManagerPendingSummary(pendingReservations) {
+function renderManagerPendingSummary(records) {
+  const pendingReservations = pendingReservationsInAccessScope(records);
+  if (accessFacility !== "all") {
+    managerPendingSummary.replaceChildren();
+    if (pendingReservations.length) {
+      const line = document.createElement("button");
+      line.type = "button";
+      line.className = "manager-pending-link";
+      line.textContent = `${facilityLabel(accessFacility)}　受付中：${pendingReservations.length}件`;
+      line.addEventListener("click", scrollToOldestPendingReservation);
+      managerPendingSummary.append(line);
+    }
+    managerPendingSummary.hidden = !managerPendingSummary.childElementCount;
+    return;
+  }
   const counts = new Map(facilities.map((facility) => [facility, 0]));
   for (const reservation of pendingReservations) {
     if (counts.has(reservation.facility)) counts.set(reservation.facility, counts.get(reservation.facility) + 1);
@@ -201,21 +215,6 @@ function renderManagerPendingSummary(pendingReservations) {
     managerPendingSummary.append(line);
   }
   managerPendingSummary.hidden = !managerPendingSummary.childElementCount;
-}
-
-function startManagerPendingSummary() {
-  stopPendingSummary?.();
-  if (accessFacility !== "all") {
-    managerPendingSummary.hidden = true;
-    managerPendingSummary.replaceChildren();
-    return;
-  }
-  const pendingQuery = query(collection(db, "reservations"), where("status", "==", "pending"));
-  stopPendingSummary = onSnapshot(pendingQuery, (snapshot) => {
-    renderManagerPendingSummary(snapshot.docs.map((item) => item.data()).filter(reservationIsInAccessScope));
-  }, () => {
-    managerPendingSummary.hidden = true;
-  });
 }
 
 const closureTemplates = {
@@ -665,7 +664,7 @@ document.querySelector("#previous-template-month").addEventListener("click", () 
 document.querySelector("#next-template-month").addEventListener("click", () => shiftClosedDaysMonth(1));
 
 onAuthStateChanged(auth, async (user) => {
-  stopListening?.(); stopListening = null; stopPendingSummary?.(); stopPendingSummary = null; stopClosedDays?.(); stopClosedDays = null; stopAdminAvailability?.(); stopAdminAvailability = null; selectedId = null;
+  stopListening?.(); stopListening = null; stopClosedDays?.(); stopClosedDays = null; stopAdminAvailability?.(); stopAdminAvailability = null; selectedId = null;
   if (!user) { loginPanel.hidden = false; adminPanel.hidden = true; staffReservationPanel.hidden = true; managerPendingSummary.hidden = true; managerPendingSummary.replaceChildren(); return; }
   try {
     const token = await getIdTokenResult(user, true);
@@ -686,7 +685,7 @@ onAuthStateChanged(auth, async (user) => {
     adminFacility.disabled = facility !== "all";
     closedDaysFacility.disabled = facility !== "all";
     closedDayFacility.disabled = facility !== "all";
-    loginPanel.hidden = true; adminPanel.hidden = false; changeAdminFacility(selectedFacility); startManagerPendingSummary();
+    loginPanel.hidden = true; adminPanel.hidden = false; changeAdminFacility(selectedFacility);
   } catch {
     await signOut(auth);
     message(loginStatus, "職員権限を確認できません。もう一度ログインしてください。", "error");
