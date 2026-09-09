@@ -50,7 +50,8 @@ function setFacility(facility, room = "") {
 function monthBounds() { const start = localDate(displayedMonth); const end = new Date(displayedMonth); end.setMonth(end.getMonth() + 1); end.setDate(0); return [start, localDate(end)]; }
 function statusFor(date, slot) {
   if (closedDays.has(date)) return "closed";
-  return availability.get(reservationId(selectedFacility, selectedRoom, date, slot))?.status || "available";
+  const status = availability.get(reservationId(selectedFacility, selectedRoom, date, slot))?.status || "available";
+  return status === "confirmed" ? "reserved" : status;
 }
 function dateStatus(date) {
   if (closedDays.has(date)) return "closed";
@@ -58,7 +59,7 @@ function dateStatus(date) {
   if (states.some((status) => status !== "available")) return "pending";
   return "available";
 }
-function statusLabel(status) { return ({ available: "空き", closed: "停止" })[status] || "受付中"; }
+function statusLabel(status) { return ({ available: "空き", pending: "受付中", reserved: "予約あり", closed: "停止" })[status] || "受付中"; }
 function renderCalendar() {
   calendar.replaceChildren();
   calendarMonth.textContent = `${displayedMonth.getFullYear()}年${displayedMonth.getMonth() + 1}月`;

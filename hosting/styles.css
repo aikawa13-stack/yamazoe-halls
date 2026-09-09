@@ -41,9 +41,11 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .slot-list { display: grid; gap: .9rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .slot-item { border: 1px solid #d5e0e6; border-left: .4rem solid #2477b8; border-radius: .7rem; display: grid; gap: .8rem; padding: 1rem; }
 .slot-item.is-pending { border-left-color: #718291; }
+.slot-item.is-reserved { border-left-color: #718291; }
 .slot-item.is-closed { border-left-color: #c44b45; }
 .slot-item p { font-weight: 800; margin: 0; }
 .slot-item.is-pending p { color: #596978; }
+.slot-item.is-reserved p { color: #596978; }
 .slot-item.is-closed p { color: #ad2b2b; }
 .form-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .full-width { grid-column: 1 / -1; }

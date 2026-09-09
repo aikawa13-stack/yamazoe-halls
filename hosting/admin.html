@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260909-closure-calendar" />
     <title>Yamazoe Halls | 職員管理</title>
   </head>
   <body>
@@ -31,6 +31,22 @@
           <button id="sign-out" class="secondary" type="button">ログアウト</button>
         </div>
         <p id="admin-status" role="status" aria-live="polite"></p>
+        <section class="card admin-calendar-card" aria-labelledby="admin-calendar-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">HALL SCHEDULE</p>
+              <h2 id="admin-calendar-title">予約・休館日カレンダー</h2>
+            </div>
+            <div class="month-controls">
+              <button id="previous-admin-month" class="secondary" type="button" aria-label="前月">←</button>
+              <strong id="admin-calendar-month"></strong>
+              <button id="next-admin-month" class="secondary" type="button" aria-label="次月">→</button>
+            </div>
+          </div>
+          <p class="calendar-legend"><span class="status-dot available"></span>開館日 <span class="status-dot pending"></span>予約あり <span class="status-dot closed"></span>休館日</p>
+          <p class="hint">日付を選択すると、開館日は休館日に設定し、休館日は例外開館として削除できます。予約ありは館内のいずれかの部屋に予約がある日です。</p>
+          <div id="admin-calendar" class="calendar" aria-label="職員用予約・休館日カレンダー"></div>
+        </section>
         <section class="card closed-days-card" aria-labelledby="closed-days-title">
           <h2 id="closed-days-title">休館日管理</h2>
           <p id="closed-day-status" role="status" aria-live="polite"></p>
@@ -95,6 +111,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="./admin.js"></script>
+    <script type="module" src="./admin.js?v=20260909-closure-calendar"></script>
   </body>
 </html>

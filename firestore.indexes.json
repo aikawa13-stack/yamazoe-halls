@@ -27,6 +27,14 @@
       ]
     },
     {
+      "collectionGroup": "availability",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "facility", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "closedDays",
       "queryScope": "COLLECTION",
       "fields": [

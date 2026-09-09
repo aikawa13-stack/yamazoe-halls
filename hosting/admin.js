@@ -33,13 +33,17 @@ const closedDayDate = document.querySelector("#closed-day-date");
 const closedDayPreview = document.querySelector("#closed-day-preview");
 const closedDayPreviewCount = document.querySelector("#closed-day-preview-count");
 const saveClosedDays = document.querySelector("#save-closed-days");
+const adminCalendar = document.querySelector("#admin-calendar");
+const adminCalendarMonth = document.querySelector("#admin-calendar-month");
 let selectedId = null;
 let reservations = new Map();
 let stopListening = null;
 let stopClosedDays = null;
+let stopAdminAvailability = null;
 let accessFacility = null;
 let configuredClosedDays = new Map();
 let closurePreview = new Map();
+let adminAvailability = new Map();
 
 function message(target, text, type = "") { target.textContent = text; target.className = type; }
 
@@ -176,6 +180,77 @@ function formatTimestamp(value) {
   return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short" }).format(value.toDate());
 }
 
+function adminDateStatus(date) {
+  if (configuredClosedDays.has(closureId(closedDaysFacility.value, date))) return "closed";
+  return [...adminAvailability.values()].some((record) => record.date === date && record.status !== "available") ? "pending" : "available";
+}
+
+async function deleteClosedDay(day) {
+  const data = day.data();
+  const batch = writeBatch(db);
+  batch.delete(day.ref);
+  batch.delete(doc(db, "closureAvailability", publicClosureId(data.facilityId, data.date)));
+  batch.set(doc(collection(db, "closedDayAuditLogs")), {
+    action: "delete", facilityId: data.facilityId, date: data.date,
+    deletedBy: auth.currentUser.email, deletedAt: serverTimestamp(),
+  });
+  await batch.commit();
+}
+
+async function addClosedDay(facilityId, date) {
+  const email = auth.currentUser?.email;
+  if (!email) throw new Error("No signed-in staff member");
+  const entry = closureMetadata(date);
+  const batch = writeBatch(db);
+  batch.set(doc(db, "closedDays", closureId(facilityId, date)), {
+    facilityId, date, weekday: entry.weekday, isHoliday: entry.isHoliday,
+    holidayName: entry.holidayName, createdBy: email, createdAt: serverTimestamp(),
+  });
+  batch.set(doc(db, "closureAvailability", publicClosureId(facilityId, date)), { facilityId, date });
+  await batch.commit();
+}
+
+function renderAdminCalendar() {
+  const month = closedDaysMonth.value;
+  if (!month) return;
+  const [year, monthNumber] = month.split("-").map(Number);
+  const firstDay = new Date(year, monthNumber - 1, 1);
+  const days = new Date(year, monthNumber, 0).getDate();
+  adminCalendar.replaceChildren();
+  adminCalendarMonth.textContent = `${year}年${monthNumber}月`;
+  for (const labelText of ["日", "月", "火", "水", "木", "金", "土"]) {
+    const label = document.createElement("div"); label.className = "weekday"; label.textContent = labelText; adminCalendar.append(label);
+  }
+  for (let index = 0; index < firstDay.getDay(); index += 1) adminCalendar.append(document.createElement("div"));
+  for (let day = 1; day <= days; day += 1) {
+    const date = localDate(new Date(year, monthNumber - 1, day));
+    const status = adminDateStatus(date);
+    const button = document.createElement("button");
+    button.type = "button"; button.className = `calendar-day is-${status}`;
+    button.setAttribute("aria-label", `${date}、${status === "closed" ? "休館日" : status === "pending" ? "予約あり" : "開館日"}`);
+    const dayNumber = document.createElement("strong"); dayNumber.textContent = String(day);
+    const marker = document.createElement("span"); marker.className = "day-marker"; marker.textContent = status === "closed" ? "休館日" : status === "pending" ? "予約あり" : "開館日";
+    button.append(dayNumber, marker);
+    button.addEventListener("click", async () => {
+      const facilityId = closedDaysFacility.value;
+      if (status === "closed") {
+        if (!window.confirm(`${date} を休館日から削除し、開館扱いにしますか？`)) return;
+        try {
+          await deleteClosedDay(configuredClosedDays.get(closureId(facilityId, date)));
+          message(closedDayStatus, "休館日を削除し、開館扱いにしました。", "success");
+        } catch { message(closedDayStatus, "休館日を削除できません。職員権限を確認してください。", "error"); }
+      } else {
+        if (!window.confirm(`${date} を休館日に設定しますか？`)) return;
+        try {
+          await addClosedDay(facilityId, date);
+          message(closedDayStatus, "休館日に設定しました。", "success");
+        } catch { message(closedDayStatus, "休館日を設定できません。職員権限を確認してください。", "error"); }
+      }
+    });
+    adminCalendar.append(button);
+  }
+}
+
 function renderPreview() {
   closedDayPreview.replaceChildren();
   const entries = [...closurePreview.values()].sort((a, b) => a.date.localeCompare(b.date));
@@ -205,14 +280,7 @@ function renderClosedDays(days) {
     button.addEventListener("click", async () => {
       if (!window.confirm(`${data.date} を休館日から削除し、開館扱いにしますか？`)) return;
       try {
-        const batch = writeBatch(db);
-        batch.delete(day.ref);
-        batch.delete(doc(db, "closureAvailability", publicClosureId(data.facilityId, data.date)));
-        batch.set(doc(collection(db, "closedDayAuditLogs")), {
-          action: "delete", facilityId: data.facilityId, date: data.date,
-          deletedBy: auth.currentUser.email, deletedAt: serverTimestamp(),
-        });
-        await batch.commit();
+        await deleteClosedDay(day);
         message(closedDayStatus, "休館日を削除し、開館扱いにしました。", "success");
       } catch { message(closedDayStatus, "休館日を削除できません。職員権限を確認してください。", "error"); }
     });
@@ -221,16 +289,25 @@ function renderClosedDays(days) {
 }
 
 function startClosedDays() {
-  stopClosedDays?.();
+  stopClosedDays?.(); stopAdminAvailability?.();
   const facilityId = closedDaysFacility.value;
   const [start, end] = monthBounds(closedDaysMonth.value);
+  configuredClosedDays = new Map();
+  adminAvailability = new Map();
+  renderAdminCalendar();
   const closedDaysQuery = query(collection(db, "closedDays"), where("facilityId", "==", facilityId), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
   stopClosedDays = onSnapshot(closedDaysQuery, (snapshot) => {
     configuredClosedDays = new Map(snapshot.docs.map((item) => [item.id, item]));
     renderClosedDays(snapshot.docs);
+    renderAdminCalendar();
   }, () => {
     message(closedDayStatus, "休館日一覧を取得できません。職員権限を確認してください。", "error");
   });
+  const availabilityQuery = query(collection(db, "availability"), where("facility", "==", facilityId), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
+  stopAdminAvailability = onSnapshot(availabilityQuery, (snapshot) => {
+    adminAvailability = new Map(snapshot.docs.map((item) => [item.id, item.data()]));
+    renderAdminCalendar();
+  }, () => message(adminStatus, "カレンダーの予約状況を取得できません。", "error"));
 }
 
 loginForm.addEventListener("submit", async (event) => {
@@ -342,14 +419,23 @@ closedDaysFacility.addEventListener("change", () => {
   closedDayFacility.value = closedDaysFacility.value;
   closurePreview = new Map(); renderPreview(); startClosedDays();
 });
-closedDaysMonth.addEventListener("change", () => startClosedDays());
+closedDaysMonth.addEventListener("change", () => { closedDayMonth.value = closedDaysMonth.value; startClosedDays(); });
 closedDayFacility.addEventListener("change", () => {
   closedDaysFacility.value = closedDayFacility.value;
   closurePreview = new Map(); renderPreview(); startClosedDays();
 });
+function shiftClosedDaysMonth(offset) {
+  const [year, month] = closedDaysMonth.value.split("-").map(Number);
+  const next = new Date(year, month - 1 + offset, 1);
+  closedDaysMonth.value = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+  closedDayMonth.value = closedDaysMonth.value;
+  startClosedDays();
+}
+document.querySelector("#previous-admin-month").addEventListener("click", () => shiftClosedDaysMonth(-1));
+document.querySelector("#next-admin-month").addEventListener("click", () => shiftClosedDaysMonth(1));
 
 onAuthStateChanged(auth, async (user) => {
-  stopListening?.(); stopListening = null; stopClosedDays?.(); stopClosedDays = null; selectedId = null;
+  stopListening?.(); stopListening = null; stopClosedDays?.(); stopClosedDays = null; stopAdminAvailability?.(); stopAdminAvailability = null; selectedId = null;
   if (!user) { loginPanel.hidden = false; adminPanel.hidden = true; return; }
   try {
     const token = await getIdTokenResult(user, true);
