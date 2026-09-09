@@ -6,6 +6,10 @@ const firebaseConfig = { apiKey: "AIzaSyB4RYPAvnwets8LI6Vefnuxc_eC7ftymig", auth
 const db = getFirestore(initializeApp(firebaseConfig));
 const form = document.querySelector("#reservation-form");
 const formStatus = document.querySelector("#form-status");
+const phoneInput = document.querySelector("#phone");
+const phoneWarning = document.querySelector("#phone-warning");
+const publicOperationModal = document.querySelector("#public-operation-modal");
+const publicOperationModalPanel = document.querySelector("#public-operation-modal .public-operation-modal__panel");
 const submitButton = document.querySelector("#submit-button");
 const dateInput = document.querySelector("#date");
 const formFacility = document.querySelector("#facility");
@@ -26,6 +30,8 @@ let availability = new Map();
 let closedDays = new Set();
 let stopAvailability = null;
 let stopClosedDays = null;
+let publicOperationModalTimer = null;
+let publicOperationModalHideTimer = null;
 displayedMonth.setDate(1);
 dateInput.min = localDate(new Date());
 dateInput.value = selectedDate;
@@ -34,6 +40,24 @@ function localDate(date) { const local = new Date(date); local.setMinutes(local.
 function reservationId(facility, room, date, slot) { return `${facility}_${room}_${date}_${slot}`; }
 function closureAvailabilityId(facility, date) { return `${facility}_${date}`; }
 function setMessage(target, message, type = "") { target.textContent = message; target.className = type; }
+function validatePhone() {
+  const normalized = phoneInput.value.replace(/\D/g, "");
+  if (phoneInput.value !== normalized) phoneInput.value = normalized;
+  const valid = normalized.length >= 10;
+  phoneWarning.hidden = valid;
+  phoneInput.setAttribute("aria-invalid", String(!valid));
+  return valid;
+}
+function showPublicOperationModal(text) {
+  clearTimeout(publicOperationModalTimer); clearTimeout(publicOperationModalHideTimer);
+  publicOperationModalPanel.textContent = text;
+  publicOperationModal.hidden = false;
+  requestAnimationFrame(() => publicOperationModal.classList.add("is-visible"));
+  publicOperationModalTimer = setTimeout(() => {
+    publicOperationModal.classList.remove("is-visible");
+    publicOperationModalHideTimer = setTimeout(() => { publicOperationModal.hidden = true; }, 220);
+  }, 2800);
+}
 function fillRooms(select, facility, selected = "") {
   select.replaceChildren();
   for (const room of roomsFor(facility)) select.add(new Option(room.label, room.id, false, room.id === selected));
@@ -119,8 +143,14 @@ formRoom.addEventListener("change", () => { selectedRoom = formRoom.value; avail
 dateInput.addEventListener("change", () => { selectedDate = dateInput.value; displayedMonth = new Date(`${selectedDate}T00:00:00`); displayedMonth.setDate(1); listenCalendarData(); });
 document.querySelector("#previous-month").addEventListener("click", () => selectMonth(-1));
 document.querySelector("#next-month").addEventListener("click", () => selectMonth(1));
+phoneInput.addEventListener("input", validatePhone);
 form.addEventListener("submit", async (event) => {
-  event.preventDefault(); if (!form.reportValidity()) return;
+  event.preventDefault();
+  if (!validatePhone()) {
+    const phoneError = "電話番号の桁数が不足しているため、予約を受け付けられません。10桁以上で入力してください。";
+    setMessage(formStatus, phoneError, "error"); showPublicOperationModal(phoneError); phoneInput.focus(); return;
+  }
+  if (!form.reportValidity()) return;
   const data = new FormData(form); const facility = String(data.get("facility")); const room = String(data.get("room")); const date = String(data.get("date")); const slot = String(data.get("slot")); const id = reservationId(facility, room, date, slot); const createdAt = serverTimestamp();
   const reservation = { slotId: id, facility, room, date, slot, customerName: String(data.get("customerName")).trim(), phone: String(data.get("phone")).trim(), purpose: String(data.get("purpose")).trim(), notes: String(data.get("notes")).trim(), status: "pending", createdAt };
   const availabilityRecord = { slotId: id, facility, room, date, slot, status: "pending", createdAt };

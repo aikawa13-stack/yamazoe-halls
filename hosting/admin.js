@@ -41,6 +41,8 @@ const staffReservationStatus = document.querySelector("#staff-reservation-status
 const staffFacility = document.querySelector("#staff-facility");
 const staffRoom = document.querySelector("#staff-room");
 const staffDate = document.querySelector("#staff-date");
+const staffPhone = document.querySelector("#staff-phone");
+const staffPhoneWarning = document.querySelector("#staff-phone-warning");
 const adminOperationModal = document.querySelector("#admin-operation-modal");
 const adminOperationModalPanel = document.querySelector("#admin-operation-modal .admin-operation-modal__panel");
 let selectedId = null;
@@ -72,6 +74,14 @@ function message(target, text, type = "", toastText = text) {
   if (type === "error") showOperationModal("処理に失敗しました。", "error");
 }
 function reservationId(facility, room, date, slot) { return `${facility}_${room}_${date}_${slot}`; }
+function validateStaffPhone() {
+  const normalized = staffPhone.value.replace(/\D/g, "");
+  if (staffPhone.value !== normalized) staffPhone.value = normalized;
+  const valid = !normalized || normalized.length >= 10;
+  staffPhoneWarning.hidden = valid;
+  staffPhone.setAttribute("aria-invalid", String(!valid));
+  return valid;
+}
 
 function fillRooms(select, facility, selected = "") {
   select.replaceChildren();
@@ -432,6 +442,10 @@ staffFacility.addEventListener("change", () => fillRooms(staffRoom, staffFacilit
 
 staffReservationForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!validateStaffPhone()) {
+    const phoneError = "電話番号の桁数が不足しています。入力する場合は10桁以上で入力してください。";
+    message(staffReservationStatus, phoneError, "error"); showOperationModal(phoneError, "error"); staffPhone.focus(); return;
+  }
   if (!staffReservationForm.reportValidity()) return;
   const facility = staffFacility.value;
   const room = staffRoom.value;
@@ -450,7 +464,7 @@ staffReservationForm.addEventListener("submit", async (event) => {
     const reservation = {
       slotId: id, facility, room, date, slot,
       customerName: document.querySelector("#staff-name").value.trim(),
-      phone: document.querySelector("#staff-phone").value.trim(),
+      phone: staffPhone.value.trim(),
       purpose: document.querySelector("#staff-purpose").value.trim(),
       notes: document.querySelector("#staff-notes").value.trim(),
       status: "confirmed", isStaffReservation: true, createdBy: email, createdAt: serverTimestamp(),
@@ -508,6 +522,7 @@ document.querySelector("#delete-reservation").addEventListener("click", async ()
 });
 
 document.querySelector("#sign-out").addEventListener("click", () => signOut(auth));
+staffPhone.addEventListener("input", validateStaffPhone);
 
 const currentMonth = localDate(new Date()).slice(0, 7);
 closedDaysMonth.value = currentMonth;

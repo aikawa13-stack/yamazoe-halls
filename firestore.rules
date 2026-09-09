@@ -52,8 +52,7 @@ service cloud.firestore {
              request.resource.data.customerName.size() >= 1 &&
              request.resource.data.customerName.size() <= 80 &&
              request.resource.data.phone is string &&
-             request.resource.data.phone.size() >= 8 &&
-             request.resource.data.phone.size() <= 30 &&
+             request.resource.data.phone.matches("^[0-9]{10,30}$") &&
              request.resource.data.purpose is string &&
              request.resource.data.purpose.size() >= 1 &&
              request.resource.data.purpose.size() <= 200 &&
@@ -96,7 +95,8 @@ service cloud.firestore {
              request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") &&
              request.resource.data.slot in ["morning", "afternoon", "night"] &&
              request.resource.data.customerName is string && request.resource.data.customerName.size() <= 80 &&
-             request.resource.data.phone is string && request.resource.data.phone.size() <= 30 &&
+             request.resource.data.phone is string &&
+             (request.resource.data.phone == "" || request.resource.data.phone.matches("^[0-9]{10,30}$")) &&
              request.resource.data.purpose is string && request.resource.data.purpose.size() >= 1 && request.resource.data.purpose.size() <= 200 &&
              request.resource.data.notes is string && request.resource.data.notes.size() <= 500 &&
              request.resource.data.status == "confirmed" && request.resource.data.isStaffReservation == true &&

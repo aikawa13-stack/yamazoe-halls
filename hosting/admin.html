@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260909-admin-modal" />
+    <link rel="stylesheet" href="./styles.css?v=20260909-phone-validation" />
     <title>Yamazoe Halls | 職員管理</title>
   </head>
   <body>
@@ -103,7 +103,7 @@
             <label>利用日<input id="staff-date" type="date" required /></label>
             <label>利用区分<select id="staff-slot" required><option value="morning">午前（9:00–12:00）</option><option value="afternoon">午後（13:00–17:00）</option><option value="night">夜間（18:00–21:00）</option></select></label>
             <label>氏名（任意）<input id="staff-name" maxlength="80" /></label>
-            <label>電話番号（任意）<input id="staff-phone" maxlength="30" inputmode="tel" /></label>
+            <label>電話番号（任意）<input id="staff-phone" type="text" maxlength="30" inputmode="numeric" autocomplete="tel" /><span id="staff-phone-warning" class="field-warning" role="alert" hidden>電話番号は10桁以上で入力してください。</span></label>
             <label class="full-width">利用目的<textarea id="staff-purpose" maxlength="200" rows="3" required></textarea></label>
             <label class="full-width">備考<textarea id="staff-notes" maxlength="500" rows="4"></textarea></label>
             <div class="full-width admin-actions"><button type="submit">確定予約として登録</button></div>
@@ -138,6 +138,6 @@
     <div id="admin-operation-modal" class="admin-operation-modal" aria-live="polite" aria-atomic="true" hidden>
       <div class="admin-operation-modal__panel" role="status"></div>
     </div>
-    <script type="module" src="./admin.js?v=20260909-admin-modal"></script>
+    <script type="module" src="./admin.js?v=20260909-phone-validation"></script>
   </body>
 </html>
