@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260909-admin-facility-ui" />
+    <link rel="stylesheet" href="./styles.css?v=20260909-admin-summary-ui" />
     <title>Yamazoe Halls | 職員管理</title>
   </head>
   <body>
@@ -31,6 +31,7 @@
           <button id="sign-out" class="secondary" type="button">ログアウト</button>
         </div>
         <p id="admin-status" role="status" aria-live="polite"></p>
+        <div id="manager-pending-summary" class="manager-pending-summary" aria-live="polite" hidden></div>
         <section class="card admin-calendar-card" aria-labelledby="admin-calendar-title">
           <div class="section-heading">
             <div>
@@ -70,7 +71,14 @@
                     <option value="toyohara">豊原</option>
                   </select>
                 </label>
-                <label>対象月<input id="closed-days-month" type="month" required /></label>
+                <div class="closed-days-month-picker">
+                  <label>対象月<input id="closed-days-month" type="month" required /></label>
+                  <div class="closed-days-month-nav" aria-label="対象月の移動">
+                    <button id="previous-closed-days-month" class="secondary" type="button" aria-label="前月">←</button>
+                    <strong id="closed-days-month-label"></strong>
+                    <button id="next-closed-days-month" class="secondary" type="button" aria-label="次月">→</button>
+                  </div>
+                </div>
               </div>
             </aside>
             <section class="closed-days-list-panel" aria-labelledby="closed-days-list-title">
@@ -152,6 +160,6 @@
     <div id="admin-operation-modal" class="admin-operation-modal" aria-live="polite" aria-atomic="true" hidden>
       <div class="admin-operation-modal__panel" role="status"></div>
     </div>
-    <script type="module" src="./admin.js?v=20260909-admin-facility-ui"></script>
+    <script type="module" src="./admin.js?v=20260909-admin-summary-ui"></script>
   </body>
 </html>

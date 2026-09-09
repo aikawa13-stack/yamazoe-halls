@@ -58,6 +58,8 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 #form-status, #availability-status { line-height: 1.6; margin: 1rem 0 0; min-height: 1.6em; }
 .success { color: #16613d; font-weight: 700; }
 .error { color: #ad2b2b; font-weight: 700; }
+.manager-pending-summary { background: #fff8dc; border-left: .35rem solid #d69d00; border-radius: .6rem; color: #624500; display: grid; font-weight: 800; gap: .35rem; margin: 1rem 0; padding: .75rem 1rem; }
+.manager-pending-summary p { margin: 0; }
 .field-warning { color: #ad2b2b; display: block; font-size: .88rem; font-weight: 700; line-height: 1.45; margin-top: .35rem; }
 footer { margin-top: 1.5rem; text-align: right; }
 footer a { color: #596978; font-size: .9rem; }
@@ -72,6 +74,10 @@ footer a { color: #596978; font-size: .9rem; }
 .closed-days-facility-panel, .closed-days-list-panel, .closed-days-register-panel { background: #f7fbfd; border: 1px solid #d5e0e6; border-radius: .85rem; padding: 1rem; }
 .closed-days-facility-panel { display: grid; align-content: start; gap: 1rem; grid-column: 1 / -1; }
 .closed-days-filter-row { display: grid; gap: .8rem; grid-template-columns: repeat(2, minmax(12rem, 1fr)); max-width: 36rem; }
+.closed-days-month-picker { align-items: end; display: grid; gap: .4rem; grid-template-columns: minmax(11rem, 1fr) auto; }
+.closed-days-month-nav { align-items: center; display: grid; gap: .45rem; grid-template-columns: auto auto auto; }
+.closed-days-month-nav button { min-height: 2.7rem; padding: .45rem .65rem; }
+.closed-days-month-nav strong { color: #31485e; font-size: .9rem; min-width: 5.5rem; text-align: center; }
 .template-controls { display: grid; gap: .8rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .template-controls button { grid-column: 1 / -1; justify-self: start; }
 .closed-day-list { display: grid; gap: .6rem; }
@@ -115,5 +121,5 @@ footer a { color: #596978; font-size: .9rem; }
 .public-operation-modal.is-visible .public-operation-modal__panel { opacity: 1; transform: scale(1) translateY(0); }
 @media (prefers-reduced-motion: reduce) { .admin-operation-modal, .admin-operation-modal__panel, .public-operation-modal, .public-operation-modal__panel { transition: none; } }
 @media (max-width: 1000px) { .closed-days-workspace { grid-template-columns: 1fr 1fr; } .closed-days-register-panel { grid-column: 1 / -1; } }
-@media (max-width: 800px) { .admin-layout, .slot-list, .closed-days-workspace, .individual-closed-day-form, .closed-days-filter-row, .template-controls { grid-template-columns: 1fr; } .closed-days-register-panel { grid-column: auto; } .reservation-list-heading { align-items: stretch; flex-direction: column; } .admin-calendar-tools { align-items: stretch; justify-content: stretch; width: 100%; } .admin-facility-control { min-width: 0; width: 100%; } .template-controls button { justify-self: stretch; } }
+@media (max-width: 800px) { .admin-layout, .slot-list, .closed-days-workspace, .individual-closed-day-form, .closed-days-filter-row, .template-controls { grid-template-columns: 1fr; } .closed-days-register-panel { grid-column: auto; } .reservation-list-heading { align-items: stretch; flex-direction: column; } .admin-calendar-tools { align-items: stretch; justify-content: stretch; width: 100%; } .admin-facility-control { min-width: 0; width: 100%; } .closed-days-month-picker { grid-template-columns: 1fr; } .closed-days-month-nav { justify-content: start; } .template-controls button { justify-self: stretch; } }
 @media (max-width: 640px) { .page-shell { padding-top: 2.5rem; } .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: auto; } .section-heading { align-items: start; flex-direction: column; } .facility-picker { max-width: none; width: 100%; } .calendar { gap: .25rem; } .calendar-day { min-height: 4.1rem; padding: .4rem .15rem; } .day-marker { font-size: .62rem; padding: .1rem .2rem; } }

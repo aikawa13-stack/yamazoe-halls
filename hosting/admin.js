@@ -18,6 +18,7 @@ const adminPanel = document.querySelector("#admin-panel");
 const loginForm = document.querySelector("#login-form");
 const loginStatus = document.querySelector("#login-status");
 const adminStatus = document.querySelector("#admin-status");
+const managerPendingSummary = document.querySelector("#manager-pending-summary");
 const list = document.querySelector("#reservation-list");
 const pendingReservationCount = document.querySelector("#pending-reservation-count");
 const editForm = document.querySelector("#edit-form");
@@ -28,6 +29,7 @@ const closedDayStatus = document.querySelector("#closed-day-status");
 const closedDayList = document.querySelector("#closed-day-list");
 const closedDaysFacility = document.querySelector("#closed-days-facility");
 const closedDaysMonth = document.querySelector("#closed-days-month");
+const closedDaysMonthLabel = document.querySelector("#closed-days-month-label");
 const closedDayFacility = document.querySelector("#closed-day-facility");
 const closedDayMonth = document.querySelector("#closed-day-month");
 const closedDayDate = document.querySelector("#closed-day-date");
@@ -50,6 +52,7 @@ const adminOperationModalPanel = document.querySelector("#admin-operation-modal 
 let selectedId = null;
 let reservations = new Map();
 let stopListening = null;
+let stopPendingSummary = null;
 let stopClosedDays = null;
 let stopAdminAvailability = null;
 let accessFacility = null;
@@ -58,6 +61,7 @@ let closurePreview = new Map();
 let adminAvailability = new Map();
 let operationModalTimer = null;
 let operationModalHideTimer = null;
+const facilities = ["higashiyama", "hatano", "toyohara"];
 
 function showOperationModal(text, type = "success") {
   clearTimeout(operationModalTimer); clearTimeout(operationModalHideTimer);
@@ -139,8 +143,40 @@ function startReservations() {
     reservations = new Map(snapshot.docs.map((item) => [item.id, item.data()]));
     if (selectedId && !reservations.has(selectedId)) { selectedId = null; editForm.hidden = true; emptyDetail.hidden = false; }
     renderList();
-    message(adminStatus, `${facilityLabel(adminFacility.value)}の予約を${reservations.size}件表示しています。`);
+    const pendingCount = [...reservations.values()].filter((reservation) => reservation.status === "pending").length;
+    message(adminStatus, pendingCount ? `${facilityLabel(adminFacility.value)}の予約を ${pendingCount} 件受付中です。` : "");
   }, () => message(adminStatus, "予約一覧を取得できません。権限設定を確認してください。", "error"));
+}
+
+function renderManagerPendingSummary(pendingReservations) {
+  const counts = new Map(facilities.map((facility) => [facility, 0]));
+  for (const reservation of pendingReservations) {
+    if (counts.has(reservation.facility)) counts.set(reservation.facility, counts.get(reservation.facility) + 1);
+  }
+  managerPendingSummary.replaceChildren();
+  for (const facility of facilities) {
+    const count = counts.get(facility);
+    if (!count) continue;
+    const line = document.createElement("p");
+    line.textContent = `${facilityLabel(facility)}　受付中：${count}件`;
+    managerPendingSummary.append(line);
+  }
+  managerPendingSummary.hidden = !managerPendingSummary.childElementCount;
+}
+
+function startManagerPendingSummary() {
+  stopPendingSummary?.();
+  if (accessFacility !== "all") {
+    managerPendingSummary.hidden = true;
+    managerPendingSummary.replaceChildren();
+    return;
+  }
+  const pendingQuery = query(collection(db, "reservations"), where("status", "==", "pending"));
+  stopPendingSummary = onSnapshot(pendingQuery, (snapshot) => {
+    renderManagerPendingSummary(snapshot.docs.map((item) => item.data()));
+  }, () => {
+    managerPendingSummary.hidden = true;
+  });
 }
 
 const closureTemplates = {
@@ -163,6 +199,11 @@ function monthBounds(month) {
   const start = new Date(year, monthNumber - 1, 1);
   const end = new Date(year, monthNumber, 0);
   return [localDate(start), localDate(end)];
+}
+
+function renderClosedDaysMonthLabel() {
+  const [year, month] = closedDaysMonth.value.split("-").map(Number);
+  closedDaysMonthLabel.textContent = `${year}年${month}月`;
 }
 
 function nthWeekday(year, month, weekday, occurrence) {
@@ -335,6 +376,7 @@ function renderClosedDays(days) {
 
 function startClosedDays() {
   stopClosedDays?.(); stopAdminAvailability?.();
+  renderClosedDaysMonthLabel();
   const facilityId = closedDaysFacility.value;
   const [start, end] = monthBounds(closedDaysMonth.value);
   configuredClosedDays = new Map();
@@ -373,6 +415,7 @@ function changeAdminFacility(facility) {
 function changeAdminMonth(month) {
   closedDaysMonth.value = month;
   closedDayMonth.value = month;
+  renderClosedDaysMonthLabel();
   closurePreview = new Map();
   renderPreview();
   startClosedDays();
@@ -571,10 +614,12 @@ function shiftClosedDaysMonth(offset) {
 }
 document.querySelector("#previous-admin-month").addEventListener("click", () => shiftClosedDaysMonth(-1));
 document.querySelector("#next-admin-month").addEventListener("click", () => shiftClosedDaysMonth(1));
+document.querySelector("#previous-closed-days-month").addEventListener("click", () => shiftClosedDaysMonth(-1));
+document.querySelector("#next-closed-days-month").addEventListener("click", () => shiftClosedDaysMonth(1));
 
 onAuthStateChanged(auth, async (user) => {
-  stopListening?.(); stopListening = null; stopClosedDays?.(); stopClosedDays = null; stopAdminAvailability?.(); stopAdminAvailability = null; selectedId = null;
-  if (!user) { loginPanel.hidden = false; adminPanel.hidden = true; staffReservationPanel.hidden = true; return; }
+  stopListening?.(); stopListening = null; stopPendingSummary?.(); stopPendingSummary = null; stopClosedDays?.(); stopClosedDays = null; stopAdminAvailability?.(); stopAdminAvailability = null; selectedId = null;
+  if (!user) { loginPanel.hidden = false; adminPanel.hidden = true; staffReservationPanel.hidden = true; managerPendingSummary.hidden = true; managerPendingSummary.replaceChildren(); return; }
   try {
     const token = await getIdTokenResult(user, true);
     const role = token.claims.role;
@@ -594,7 +639,7 @@ onAuthStateChanged(auth, async (user) => {
     adminFacility.disabled = facility !== "all";
     closedDaysFacility.disabled = facility !== "all";
     closedDayFacility.disabled = facility !== "all";
-    loginPanel.hidden = true; adminPanel.hidden = false; changeAdminFacility(selectedFacility);
+    loginPanel.hidden = true; adminPanel.hidden = false; changeAdminFacility(selectedFacility); startManagerPendingSummary();
   } catch {
     await signOut(auth);
     message(loginStatus, "職員権限を確認できません。もう一度ログインしてください。", "error");
