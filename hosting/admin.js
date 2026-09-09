@@ -41,7 +41,8 @@ const staffReservationStatus = document.querySelector("#staff-reservation-status
 const staffFacility = document.querySelector("#staff-facility");
 const staffRoom = document.querySelector("#staff-room");
 const staffDate = document.querySelector("#staff-date");
-const adminToast = document.querySelector("#admin-toast");
+const adminOperationModal = document.querySelector("#admin-operation-modal");
+const adminOperationModalPanel = document.querySelector("#admin-operation-modal .admin-operation-modal__panel");
 let selectedId = null;
 let reservations = new Map();
 let stopListening = null;
@@ -51,23 +52,24 @@ let accessFacility = null;
 let configuredClosedDays = new Map();
 let closurePreview = new Map();
 let adminAvailability = new Map();
-let toastTimer = null;
-let toastHideTimer = null;
+let operationModalTimer = null;
+let operationModalHideTimer = null;
 
-function showToast(text, type = "success") {
-  clearTimeout(toastTimer); clearTimeout(toastHideTimer);
-  adminToast.textContent = text;
-  adminToast.className = `admin-toast ${type}`;
-  adminToast.hidden = false;
-  requestAnimationFrame(() => adminToast.classList.add("is-visible"));
-  toastTimer = setTimeout(() => {
-    adminToast.classList.remove("is-visible");
-    toastHideTimer = setTimeout(() => { adminToast.hidden = true; }, 250);
-  }, 2800);
+function showOperationModal(text, type = "success") {
+  clearTimeout(operationModalTimer); clearTimeout(operationModalHideTimer);
+  adminOperationModalPanel.textContent = text;
+  adminOperationModal.className = `admin-operation-modal ${type}`;
+  adminOperationModal.hidden = false;
+  requestAnimationFrame(() => adminOperationModal.classList.add("is-visible"));
+  operationModalTimer = setTimeout(() => {
+    adminOperationModal.classList.remove("is-visible");
+    operationModalHideTimer = setTimeout(() => { adminOperationModal.hidden = true; }, 220);
+  }, 1800);
 }
 function message(target, text, type = "", toastText = text) {
   target.textContent = text; target.className = type;
-  if (type === "success" || type === "error") showToast(toastText, type);
+  if (type === "success") showOperationModal(toastText, "success");
+  if (type === "error") showOperationModal("処理に失敗しました。", "error");
 }
 function reservationId(facility, room, date, slot) { return `${facility}_${room}_${date}_${slot}`; }
 
