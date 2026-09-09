@@ -95,6 +95,12 @@ function reservationListSort(left, right) {
   if (left.status === "pending") return reservationCreatedAtMillis(left) - reservationCreatedAtMillis(right);
   return `${left.date}_${left.slot}`.localeCompare(`${right.date}_${right.slot}`);
 }
+function reservationIsInAccessScope(reservation) {
+  return accessFacility === "all" || reservation.facility === accessFacility;
+}
+function pendingReservationsInAccessScope(records = reservations.values()) {
+  return [...records].filter((reservation) => reservationIsInAccessScope(reservation) && reservation.status === "pending");
+}
 function validateStaffPhone() {
   const normalized = staffPhone.value.replace(/\D/g, "");
   if (staffPhone.value !== normalized) staffPhone.value = normalized;
@@ -129,7 +135,7 @@ function selectReservation(id) {
 
 function renderList() {
   list.replaceChildren();
-  const pendingCount = [...reservations.values()].filter((reservation) => reservation.status === "pending").length;
+  const pendingCount = pendingReservationsInAccessScope().length;
   pendingReservationCount.hidden = pendingCount === 0;
   pendingReservationCount.textContent = `受付中：${pendingCount}件`;
   if (!reservations.size) { list.textContent = "この館の予約はまだありません。"; return; }
@@ -162,17 +168,19 @@ function startReservations() {
   stopListening?.();
   const reservationsQuery = accessFacility === "all"
     ? query(collection(db, "reservations"))
-    : query(collection(db, "reservations"), where("facility", "==", adminFacility.value), orderBy("date"), orderBy("slot"));
+    : query(collection(db, "reservations"), where("facility", "==", accessFacility));
   stopListening = onSnapshot(reservationsQuery, (snapshot) => {
-    const entries = snapshot.docs.map((item) => [item.id, item.data()]);
+    const entries = snapshot.docs
+      .map((item) => [item.id, item.data()])
+      .filter(([, reservation]) => reservationIsInAccessScope(reservation));
     // Keep the first pending card deterministic for the quick-navigation labels.
     // Managers also use this merged ordering across all three facilities.
     entries.sort(([, left], [, right]) => reservationListSort(left, right));
     reservations = new Map(entries);
     if (selectedId && !reservations.has(selectedId)) { selectedId = null; editForm.hidden = true; emptyDetail.hidden = false; }
     renderList();
-    const pendingCount = [...reservations.values()].filter((reservation) => reservation.status === "pending").length;
-    message(adminStatus, accessFacility === "all" ? "" : pendingCount ? `${facilityLabel(adminFacility.value)}の予約を ${pendingCount} 件受付中です。` : "");
+    const pendingCount = pendingReservationsInAccessScope().length;
+    message(adminStatus, accessFacility === "all" ? "" : pendingCount ? `${facilityLabel(accessFacility)}の予約を ${pendingCount} 件受付中です。` : "");
   }, () => message(adminStatus, "予約一覧を取得できません。権限設定を確認してください。", "error"));
 }
 
@@ -204,7 +212,7 @@ function startManagerPendingSummary() {
   }
   const pendingQuery = query(collection(db, "reservations"), where("status", "==", "pending"));
   stopPendingSummary = onSnapshot(pendingQuery, (snapshot) => {
-    renderManagerPendingSummary(snapshot.docs.map((item) => item.data()));
+    renderManagerPendingSummary(snapshot.docs.map((item) => item.data()).filter(reservationIsInAccessScope));
   }, () => {
     managerPendingSummary.hidden = true;
   });
