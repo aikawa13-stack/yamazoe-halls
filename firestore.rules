@@ -73,6 +73,60 @@ service cloud.firestore {
              request.resource.data.createdAt == request.time;
     }
 
+    function isValidStaffReservation(slotId) {
+      return request.resource.data.keys().hasAll([
+               "slotId", "facility", "room", "date", "slot", "customerName", "phone",
+               "purpose", "notes", "status", "isStaffReservation", "createdBy", "createdAt"
+             ]) &&
+             request.resource.data.keys().hasOnly([
+               "slotId", "facility", "room", "date", "slot", "customerName", "phone",
+               "purpose", "notes", "status", "isStaffReservation", "createdBy", "createdAt"
+             ]) &&
+             request.resource.data.slotId == slotId &&
+             request.resource.data.slotId == request.resource.data.facility + "_" + request.resource.data.room + "_" + request.resource.data.date + "_" + request.resource.data.slot &&
+             request.resource.data.facility in ["higashiyama", "hatano", "toyohara"] &&
+             isValidRoom(request.resource.data.facility, request.resource.data.room) &&
+             request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") &&
+             request.resource.data.slot in ["morning", "afternoon", "night"] &&
+             request.resource.data.customerName is string && request.resource.data.customerName.size() <= 80 &&
+             request.resource.data.phone is string && request.resource.data.phone.size() <= 30 &&
+             request.resource.data.purpose is string && request.resource.data.purpose.size() >= 1 && request.resource.data.purpose.size() <= 200 &&
+             request.resource.data.notes is string && request.resource.data.notes.size() <= 500 &&
+             request.resource.data.status == "confirmed" && request.resource.data.isStaffReservation == true &&
+             request.resource.data.createdBy == request.auth.token.email &&
+             request.resource.data.createdAt == request.time;
+    }
+
+    function isValidStaffAvailability(slotId) {
+      return request.resource.data.keys().hasAll([
+               "slotId", "facility", "room", "date", "slot", "status", "createdAt"
+             ]) &&
+             request.resource.data.keys().hasOnly([
+               "slotId", "facility", "room", "date", "slot", "status", "createdAt"
+             ]) &&
+             request.resource.data.slotId == slotId &&
+             request.resource.data.slotId == request.resource.data.facility + "_" + request.resource.data.room + "_" + request.resource.data.date + "_" + request.resource.data.slot &&
+             request.resource.data.facility in ["higashiyama", "hatano", "toyohara"] &&
+             isValidRoom(request.resource.data.facility, request.resource.data.room) &&
+             request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") &&
+             request.resource.data.slot in ["morning", "afternoon", "night"] &&
+             request.resource.data.status == "confirmed" && request.resource.data.createdAt == request.time;
+    }
+
+    function isValidReservationAudit() {
+      return request.resource.data.keys().hasOnly([
+               "action", "reservationId", "facility", "room", "date", "slot", "performedBy", "performedAt"
+             ]) &&
+             request.resource.data.action in ["create", "update", "delete"] &&
+             request.resource.data.reservationId is string &&
+             request.resource.data.facility in ["higashiyama", "hatano", "toyohara"] &&
+             isValidRoom(request.resource.data.facility, request.resource.data.room) &&
+             request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") &&
+             request.resource.data.slot in ["morning", "afternoon", "night", "all_day"] &&
+             request.resource.data.performedBy == request.auth.token.email &&
+             request.resource.data.performedAt == request.time;
+    }
+
     function isValidClosedDay(closedDayId) {
       return request.resource.data.keys().hasAll([
                "facilityId", "date", "weekday", "isHoliday", "holidayName", "createdBy", "createdAt"
@@ -116,10 +170,15 @@ service cloud.firestore {
     match /reservations/{slotId} {
       // Public creation must atomically add the matching non-private
       // availability record. This keeps reservation details private.
-      allow create: if request.auth == null && resource == null &&
+      allow create: if (request.auth == null && resource == null &&
         isValidReservation(slotId) &&
         !isClosedDay(request.resource.data.facility, request.resource.data.date) &&
-        getAfter(/databases/$(database)/documents/availability/$(slotId)).data.slotId == slotId;
+        getAfter(/databases/$(database)/documents/availability/$(slotId)).data.slotId == slotId) ||
+        (isAdmin() && resource == null && managesFacility(request.resource.data.facility) &&
+        isValidStaffReservation(slotId) &&
+        !isClosedDay(request.resource.data.facility, request.resource.data.date) &&
+        getAfter(/databases/$(database)/documents/availability/$(slotId)).data.slotId == slotId &&
+        getAfter(/databases/$(database)/documents/availability/$(slotId)).data.status == "confirmed");
 
       allow read, update, delete: if managesFacility(resource.data.facility);
     }
@@ -127,7 +186,10 @@ service cloud.firestore {
     match /availability/{slotId} {
       // This collection contains only slot status and is safe to expose.
       allow read: if true;
-      allow create: if managesFacility(request.resource.data.facility) || (request.auth == null && resource == null &&
+      allow create: if (isAdmin() && managesFacility(request.resource.data.facility) &&
+        isValidStaffAvailability(slotId) &&
+        getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.slotId == slotId &&
+        getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.status == "confirmed") || (request.auth == null && resource == null &&
         isValidAvailability(slotId) &&
         getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.slotId == slotId &&
         getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.status == "pending");
@@ -151,6 +213,11 @@ service cloud.firestore {
     match /closedDayAuditLogs/{auditId} {
       allow read: if managesFacility(resource.data.facilityId);
       allow create: if managesFacility(request.resource.data.facilityId) && isValidClosureAudit();
+    }
+
+    match /reservationAuditLogs/{auditId} {
+      allow read: if managesFacility(resource.data.facility);
+      allow create: if managesFacility(request.resource.data.facility) && isValidReservationAudit();
     }
 
     // The public form has no access to other collections.

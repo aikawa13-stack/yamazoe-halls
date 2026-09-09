@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, getIdTokenResult, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-import { collection, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, doc, getDoc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { facilityLabel, roomLabel, roomsFor, slotLabel } from "./config.js";
 
 const firebaseConfig = {
@@ -35,6 +35,12 @@ const closedDayPreviewCount = document.querySelector("#closed-day-preview-count"
 const saveClosedDays = document.querySelector("#save-closed-days");
 const adminCalendar = document.querySelector("#admin-calendar");
 const adminCalendarMonth = document.querySelector("#admin-calendar-month");
+const staffReservationPanel = document.querySelector("#staff-reservation-panel");
+const staffReservationForm = document.querySelector("#staff-reservation-form");
+const staffReservationStatus = document.querySelector("#staff-reservation-status");
+const staffFacility = document.querySelector("#staff-facility");
+const staffRoom = document.querySelector("#staff-room");
+const staffDate = document.querySelector("#staff-date");
 let selectedId = null;
 let reservations = new Map();
 let stopListening = null;
@@ -46,6 +52,7 @@ let closurePreview = new Map();
 let adminAvailability = new Map();
 
 function message(target, text, type = "") { target.textContent = text; target.className = type; }
+function reservationId(facility, room, date, slot) { return `${facility}_${room}_${date}_${slot}`; }
 
 function fillRooms(select, facility, selected = "") {
   select.replaceChildren();
@@ -79,7 +86,7 @@ function renderList() {
     item.className = `reservation-item${id === selectedId ? " selected" : ""}`;
     item.addEventListener("click", () => selectReservation(id));
     const date = document.createElement("strong"); date.textContent = `${reservation.date} ${slotLabel(reservation.slot)} · ${facilityLabel(reservation.facility)} ${roomLabel(reservation.facility, reservation.room)}`;
-    const details = document.createElement("span"); details.textContent = `${reservation.customerName} · ${reservation.purpose} · ${reservation.status}`;
+    const details = document.createElement("span"); details.textContent = `${reservation.isStaffReservation ? "職員入力 · " : ""}${reservation.customerName || "氏名未入力"} · ${reservation.purpose} · ${reservation.status}`;
     item.append(date, details);
     list.append(item);
   }
@@ -375,6 +382,74 @@ saveClosedDays.addEventListener("click", async () => {
   finally { renderPreview(); }
 });
 
+function addReservationAudit(batch, action, reservation, id) {
+  batch.set(doc(collection(db, "reservationAuditLogs")), {
+    action, reservationId: id, facility: reservation.facility, room: reservation.room,
+    date: reservation.date, slot: reservation.slot,
+    performedBy: auth.currentUser.email, performedAt: serverTimestamp(),
+  });
+}
+
+function prepareStaffReservationForm() {
+  const facility = accessFacility === "all" ? staffFacility.value : accessFacility;
+  staffFacility.value = facility;
+  staffFacility.disabled = accessFacility !== "all";
+  fillRooms(staffRoom, facility, staffRoom.value);
+  staffDate.min = localDate(new Date());
+  if (!staffDate.value || staffDate.value < staffDate.min) staffDate.value = staffDate.min;
+}
+
+document.querySelector("#open-staff-reservation").addEventListener("click", () => {
+  prepareStaffReservationForm();
+  staffReservationPanel.hidden = false;
+  staffReservationPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  staffFacility.focus();
+});
+document.querySelector("#close-staff-reservation").addEventListener("click", () => {
+  staffReservationPanel.hidden = true;
+  message(staffReservationStatus, "");
+});
+staffFacility.addEventListener("change", () => fillRooms(staffRoom, staffFacility.value));
+
+staffReservationForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!staffReservationForm.reportValidity()) return;
+  const facility = staffFacility.value;
+  const room = staffRoom.value;
+  const date = staffDate.value;
+  const slot = document.querySelector("#staff-slot").value;
+  const id = reservationId(facility, room, date, slot);
+  const email = auth.currentUser?.email;
+  if (!email) { message(staffReservationStatus, "職員ログインを確認できません。", "error"); return; }
+  try {
+    const [existingReservation, closure] = await Promise.all([
+      getDoc(doc(db, "reservations", id)),
+      getDoc(doc(db, "closureAvailability", publicClosureId(facility, date))),
+    ]);
+    if (closure.exists()) { message(staffReservationStatus, "この日は休館日です。例外開館として休館日を削除してから登録してください。", "error"); return; }
+    if (existingReservation.exists()) { message(staffReservationStatus, "同じ館・部屋・利用日・利用区分には既存予約があります。", "error"); return; }
+    const reservation = {
+      slotId: id, facility, room, date, slot,
+      customerName: document.querySelector("#staff-name").value.trim(),
+      phone: document.querySelector("#staff-phone").value.trim(),
+      purpose: document.querySelector("#staff-purpose").value.trim(),
+      notes: document.querySelector("#staff-notes").value.trim(),
+      status: "confirmed", isStaffReservation: true, createdBy: email, createdAt: serverTimestamp(),
+    };
+    const availabilityRecord = { slotId: id, facility, room, date, slot, status: "confirmed", createdAt: serverTimestamp() };
+    const batch = writeBatch(db);
+    batch.set(doc(db, "reservations", id), reservation);
+    batch.set(doc(db, "availability", id), availabilityRecord);
+    addReservationAudit(batch, "create", reservation, id);
+    await batch.commit();
+    staffReservationForm.reset(); prepareStaffReservationForm();
+    message(staffReservationStatus, "確定予約を登録しました。予約一覧と公開カレンダーへ反映されます。", "success");
+  } catch (error) {
+    console.error("Staff reservation submission failed", error);
+    message(staffReservationStatus, "予約を登録できません。競合または職員権限を確認してください。", "error");
+  }
+});
+
 editForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!selectedId || !editForm.reportValidity()) return;
@@ -392,6 +467,7 @@ editForm.addEventListener("submit", async (event) => {
     batch.set(doc(db, "availability", selectedId), {
       slotId: selectedId, facility: reservation.facility, room: reservation.room, date: reservation.date, slot: reservation.slot, status,
     }, { merge: true });
+    addReservationAudit(batch, "update", reservation, selectedId);
     await batch.commit();
     message(adminStatus, "予約内容を保存しました。", "success");
   } catch { message(adminStatus, "保存できません。職員権限を確認してください。", "error"); }
@@ -400,7 +476,10 @@ editForm.addEventListener("submit", async (event) => {
 document.querySelector("#delete-reservation").addEventListener("click", async () => {
   if (!selectedId || !window.confirm("この予約を削除しますか？")) return;
   try {
+    const reservation = reservations.get(selectedId);
+    if (!reservation) throw new Error("Reservation was not found");
     const batch = writeBatch(db);
+    addReservationAudit(batch, "delete", reservation, selectedId);
     batch.delete(doc(db, "reservations", selectedId));
     batch.delete(doc(db, "availability", selectedId));
     await batch.commit();
@@ -436,7 +515,7 @@ document.querySelector("#next-admin-month").addEventListener("click", () => shif
 
 onAuthStateChanged(auth, async (user) => {
   stopListening?.(); stopListening = null; stopClosedDays?.(); stopClosedDays = null; stopAdminAvailability?.(); stopAdminAvailability = null; selectedId = null;
-  if (!user) { loginPanel.hidden = false; adminPanel.hidden = true; return; }
+  if (!user) { loginPanel.hidden = false; adminPanel.hidden = true; staffReservationPanel.hidden = true; return; }
   try {
     const token = await getIdTokenResult(user, true);
     const role = token.claims.role;

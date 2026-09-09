@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260909-closure-calendar" />
+    <link rel="stylesheet" href="./styles.css?v=20260909-staff-reservation" />
     <title>Yamazoe Halls | 職員管理</title>
   </head>
   <body>
@@ -89,8 +89,32 @@
             </section>
           </div>
         </section>
+        <section id="staff-reservation-panel" class="card staff-reservation-card" aria-labelledby="staff-reservation-title" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">STAFF RESERVATION</p>
+              <h2 id="staff-reservation-title">職員予約の新規作成</h2>
+            </div>
+            <button id="close-staff-reservation" class="secondary" type="button">閉じる</button>
+          </div>
+          <form id="staff-reservation-form" class="form-grid">
+            <label>館<select id="staff-facility" required><option value="higashiyama">東山</option><option value="hatano">波多野（文化伝習館）</option><option value="toyohara">豊原</option></select></label>
+            <label>施設（部屋）<select id="staff-room" required></select></label>
+            <label>利用日<input id="staff-date" type="date" required /></label>
+            <label>利用区分<select id="staff-slot" required><option value="morning">午前（9:00–12:00）</option><option value="afternoon">午後（13:00–17:00）</option><option value="night">夜間（18:00–21:00）</option></select></label>
+            <label>氏名（任意）<input id="staff-name" maxlength="80" /></label>
+            <label>電話番号（任意）<input id="staff-phone" maxlength="30" inputmode="tel" /></label>
+            <label class="full-width">利用目的<textarea id="staff-purpose" maxlength="200" rows="3" required></textarea></label>
+            <label class="full-width">備考<textarea id="staff-notes" maxlength="500" rows="4"></textarea></label>
+            <div class="full-width admin-actions"><button type="submit">確定予約として登録</button></div>
+            <p id="staff-reservation-status" class="full-width" role="status" aria-live="polite"></p>
+          </form>
+        </section>
         <div class="admin-layout">
-          <section class="card reservation-list-wrap" aria-label="予約一覧"><div id="reservation-list"></div></section>
+          <section class="card reservation-list-wrap" aria-label="予約一覧">
+            <div class="reservation-list-heading"><h2>予約一覧</h2><button id="open-staff-reservation" type="button">職員予約の新規作成</button></div>
+            <div id="reservation-list"></div>
+          </section>
           <section class="card" aria-labelledby="edit-title">
             <h2 id="edit-title">予約詳細</h2>
             <form id="edit-form" class="stack-form" hidden>
@@ -111,6 +135,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="./admin.js?v=20260909-closure-calendar"></script>
+    <script type="module" src="./admin.js?v=20260909-staff-reservation"></script>
   </body>
 </html>

@@ -79,6 +79,10 @@ footer a { color: #596978; font-size: .9rem; }
 .closed-day-preview-item:first-child { border-top: 0; }
 .closed-day-preview-item button { font-size: .78rem; min-height: 2.1rem; padding: .35rem .55rem; }
 .reservation-list-wrap { max-height: 38rem; overflow: auto; padding: .75rem; }
+.reservation-list-heading { align-items: center; display: flex; gap: .75rem; justify-content: space-between; padding: .75rem .9rem .3rem; }
+.reservation-list-heading h2 { font-size: 1.1rem; margin: 0; }
+.reservation-list-heading button { font-size: .84rem; min-height: 2.4rem; padding: .45rem .7rem; }
+.staff-reservation-card { margin-bottom: 1.25rem; }
 .reservation-item { background: transparent; color: #192738; display: grid; gap: .3rem; padding: .9rem; text-align: left; width: 100%; }
 .reservation-item span { color: #596978; font-size: .85rem; }
 .reservation-item.selected { background: #17324d; color: #fff; }
@@ -86,5 +90,5 @@ footer a { color: #596978; font-size: .9rem; }
 .admin-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
 .danger { background: #ad2b2b; }
 @media (max-width: 1000px) { .closed-days-workspace { grid-template-columns: 1fr 1fr; } .closed-days-register-panel { grid-column: 1 / -1; } }
-@media (max-width: 800px) { .admin-layout, .slot-list, .closed-days-workspace, .individual-closed-day-form { grid-template-columns: 1fr; } .closed-days-register-panel { grid-column: auto; } }
+@media (max-width: 800px) { .admin-layout, .slot-list, .closed-days-workspace, .individual-closed-day-form { grid-template-columns: 1fr; } .closed-days-register-panel { grid-column: auto; } .reservation-list-heading { align-items: stretch; flex-direction: column; } }
 @media (max-width: 640px) { .page-shell { padding-top: 2.5rem; } .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: auto; } .section-heading { align-items: start; flex-direction: column; } .facility-picker { max-width: none; width: 100%; } .calendar { gap: .25rem; } .calendar-day { min-height: 4.1rem; padding: .4rem .15rem; } .day-marker { font-size: .62rem; padding: .1rem .2rem; } }
