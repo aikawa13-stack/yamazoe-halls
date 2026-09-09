@@ -217,6 +217,26 @@ service cloud.firestore {
       allow delete: if managesFacility(resource.data.facilityId);
     }
 
+    // Public calendar projections. The nested date collections preserve the
+    // facility and room hierarchy while keeping private staff metadata hidden.
+    match /closed_days/{facilityId}/dates/{date} {
+      allow read: if true;
+      allow create, update: if managesFacility(facilityId) &&
+        request.resource.data.keys().hasOnly(["facilityId", "date"]) &&
+        request.resource.data.facilityId == facilityId && request.resource.data.date == date;
+      allow delete: if managesFacility(facilityId);
+    }
+
+    match /stopped_days/{facilityId}/rooms/{roomId}/dates/{date} {
+      allow read: if true;
+      allow create, update: if managesFacility(facilityId) && isValidRoom(facilityId, roomId) &&
+        request.resource.data.keys().hasOnly(["facilityId", "room", "date", "createdBy", "createdAt"]) &&
+        request.resource.data.facilityId == facilityId && request.resource.data.room == roomId &&
+        request.resource.data.date == date && request.resource.data.createdBy == request.auth.token.email &&
+        request.resource.data.createdAt == request.time;
+      allow delete: if managesFacility(facilityId);
+    }
+
     match /closedDayAuditLogs/{auditId} {
       allow read: if managesFacility(resource.data.facilityId);
       allow create: if managesFacility(request.resource.data.facilityId) && isValidClosureAudit();

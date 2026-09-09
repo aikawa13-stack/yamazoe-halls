@@ -231,6 +231,8 @@ function localDate(date) {
 
 function closureId(facilityId, date) { return `${facilityId}_${date.replaceAll("-", "")}`; }
 function publicClosureId(facilityId, date) { return `${facilityId}_${date}`; }
+function publicClosedDayRef(facilityId, date) { return doc(db, "closed_days", facilityId, "dates", date); }
+function stoppedDayRef(facilityId, room, date) { return doc(db, "stopped_days", facilityId, "rooms", room, "dates", date); }
 
 function monthBounds(month) {
   const [year, monthNumber] = month.split("-").map(Number);
@@ -319,6 +321,7 @@ async function deleteClosedDay(day) {
   const batch = writeBatch(db);
   batch.delete(day.ref);
   batch.delete(doc(db, "closureAvailability", publicClosureId(data.facilityId, data.date)));
+  batch.delete(publicClosedDayRef(data.facilityId, data.date));
   batch.set(doc(collection(db, "closedDayAuditLogs")), {
     action: "delete", facilityId: data.facilityId, date: data.date,
     deletedBy: auth.currentUser.email, deletedAt: serverTimestamp(),
@@ -336,6 +339,7 @@ async function addClosedDay(facilityId, date) {
     holidayName: entry.holidayName, createdBy: email, createdAt: serverTimestamp(),
   });
   batch.set(doc(db, "closureAvailability", publicClosureId(facilityId, date)), { facilityId, date });
+  batch.set(publicClosedDayRef(facilityId, date), { facilityId, date });
   await batch.commit();
 }
 
@@ -520,6 +524,7 @@ saveClosedDays.addEventListener("click", async () => {
         createdBy: email, createdAt: serverTimestamp(),
       });
       batch.set(doc(db, "closureAvailability", publicClosureId(facilityId, entry.date)), { facilityId, date: entry.date });
+      batch.set(publicClosedDayRef(facilityId, entry.date), { facilityId, date: entry.date });
     }
     await batch.commit();
     closurePreview = new Map(); renderPreview();
@@ -572,11 +577,14 @@ staffReservationForm.addEventListener("submit", async (event) => {
   const email = auth.currentUser?.email;
   if (!email) { message(staffReservationStatus, "職員ログインを確認できません。", "error"); return; }
   try {
-    const [existingReservation, closure] = await Promise.all([
+    const [existingReservation, closure, publicClosedDay, stoppedDay] = await Promise.all([
       getDoc(doc(db, "reservations", id)),
       getDoc(doc(db, "closureAvailability", publicClosureId(facility, date))),
+      getDoc(publicClosedDayRef(facility, date)),
+      getDoc(stoppedDayRef(facility, room, date)),
     ]);
-    if (closure.exists()) { message(staffReservationStatus, "この日は休館日です。例外開館として休館日を削除してから登録してください。", "error"); return; }
+    if (closure.exists() || publicClosedDay.exists()) { message(staffReservationStatus, "この日は休館日です。例外開館として休館日を削除してから登録してください。", "error"); return; }
+    if (stoppedDay.exists()) { message(staffReservationStatus, "この施設は停止日のため予約できません。別の日付または施設を選択してください。", "error"); return; }
     if (existingReservation.exists()) { message(staffReservationStatus, "同じ館・部屋・利用日・利用区分には既存予約があります。", "error"); return; }
     const reservation = {
       slotId: id, facility, room, date, slot,
@@ -617,6 +625,14 @@ editForm.addEventListener("submit", async (event) => {
     batch.set(doc(db, "availability", selectedId), {
       slotId: selectedId, facility: reservation.facility, room: reservation.room, date: reservation.date, slot: reservation.slot, status: status === "canceled" ? "available" : status,
     }, { merge: true });
+    if (status === "closed") {
+      batch.set(stoppedDayRef(reservation.facility, reservation.room, reservation.date), {
+        facilityId: reservation.facility, room: reservation.room, date: reservation.date,
+        createdBy: auth.currentUser.email, createdAt: serverTimestamp(),
+      });
+    } else if (reservation.status === "closed") {
+      batch.delete(stoppedDayRef(reservation.facility, reservation.room, reservation.date));
+    }
     addReservationAudit(batch, "update", reservation, selectedId);
     await batch.commit();
     message(adminStatus, "予約内容を保存しました。", "success", reservation.isStaffReservation ? "職員予約を更新しました。" : "予約内容を保存しました。");
@@ -632,6 +648,7 @@ document.querySelector("#delete-reservation").addEventListener("click", async ()
     addReservationAudit(batch, "delete", reservation, selectedId);
     batch.delete(doc(db, "reservations", selectedId));
     batch.delete(doc(db, "availability", selectedId));
+    if (reservation.status === "closed") batch.delete(stoppedDayRef(reservation.facility, reservation.room, reservation.date));
     await batch.commit();
     message(adminStatus, "予約を削除しました。", "success");
   }

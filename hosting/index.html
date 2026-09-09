@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260909-closure-register-layout" />
+    <link rel="stylesheet" href="./styles.css?v=20260909-closure-stop-status" />
     <title>山添村公民館予約フォーム</title>
   </head>
   <body>
@@ -26,7 +26,7 @@
           <h3 id="calendar-month"></h3>
           <button id="next-month" class="secondary" type="button" aria-label="次の月">次月</button>
         </div>
-        <div class="availability-legend" aria-label="空き状況の凡例"><span><i class="status-dot available"></i>空き</span><span><i class="status-dot pending"></i>受付中</span><span><i class="status-dot closed"></i>停止</span></div>
+        <div class="availability-legend" aria-label="空き状況の凡例"><span><i class="status-dot available"></i>空き</span><span><i class="status-dot pending"></i>受付中</span><span><i class="status-dot stopped"></i>停止日</span><span><i class="status-dot closed"></i>休館日</span></div>
         <div id="calendar" class="calendar" role="grid" aria-labelledby="calendar-month"></div>
         <p id="availability-status" role="status" aria-live="polite"></p>
       </section>
@@ -58,6 +58,6 @@
     <div id="public-operation-modal" class="public-operation-modal" aria-live="assertive" aria-atomic="true" hidden>
       <div class="public-operation-modal__panel" role="alert"></div>
     </div>
-    <script type="module" src="./app.js?v=20260909-phone-validation"></script>
+    <script type="module" src="./app.js?v=20260909-closure-stop-status"></script>
   </body>
 </html>

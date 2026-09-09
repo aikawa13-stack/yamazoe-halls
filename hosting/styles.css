@@ -32,12 +32,14 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .status-dot { background: #718291; border-radius: 50%; display: inline-block; height: .7rem; width: .7rem; }
 .status-dot.available, .is-available .day-marker { background: #2477b8; }
 .status-dot.pending, .is-pending .day-marker { background: #718291; }
+.status-dot.stopped, .is-stopped .day-marker { background: #d97706; }
 .status-dot.closed, .is-closed .day-marker { background: #c44b45; }
 .calendar { display: grid; gap: .45rem; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .weekday { color: #596978; font-size: .82rem; font-weight: 800; padding: .25rem; text-align: center; }
 .calendar-day { background: #f7fafb; border: 1px solid #d5e0e6; color: #192738; display: grid; gap: .35rem; justify-items: center; min-height: 4.8rem; padding: .55rem .25rem; }
 .calendar-day:hover { background: #e7f2f8; }
 .calendar-day.is-pending { background: #eef1f3; }
+.calendar-day.is-stopped { background: #fff4e5; }
 .calendar-day.is-closed { background: #fbeeee; }
 .calendar-day.selected { border: 3px solid #17324d; }
 .day-marker { border-radius: 999px; color: #fff; font-size: .7rem; font-weight: 800; padding: .15rem .35rem; }
@@ -47,10 +49,12 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .slot-item { border: 1px solid #d5e0e6; border-left: .4rem solid #2477b8; border-radius: .7rem; display: grid; gap: .8rem; padding: 1rem; }
 .slot-item.is-pending { border-left-color: #718291; }
 .slot-item.is-reserved { border-left-color: #718291; }
+.slot-item.is-stopped { border-left-color: #d97706; }
 .slot-item.is-closed { border-left-color: #c44b45; }
 .slot-item p { font-weight: 800; margin: 0; }
 .slot-item.is-pending p { color: #596978; }
 .slot-item.is-reserved p { color: #596978; }
+.slot-item.is-stopped p { color: #b45309; }
 .slot-item.is-closed p { color: #ad2b2b; }
 .form-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .full-width { grid-column: 1 / -1; }
