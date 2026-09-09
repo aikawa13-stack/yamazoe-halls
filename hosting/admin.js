@@ -19,6 +19,7 @@ const loginForm = document.querySelector("#login-form");
 const loginStatus = document.querySelector("#login-status");
 const adminStatus = document.querySelector("#admin-status");
 const list = document.querySelector("#reservation-list");
+const pendingReservationCount = document.querySelector("#pending-reservation-count");
 const editForm = document.querySelector("#edit-form");
 const emptyDetail = document.querySelector("#empty-detail");
 const closedDayTemplateForm = document.querySelector("#closed-day-template-form");
@@ -33,6 +34,7 @@ const closedDayDate = document.querySelector("#closed-day-date");
 const closedDayPreview = document.querySelector("#closed-day-preview");
 const closedDayPreviewCount = document.querySelector("#closed-day-preview-count");
 const saveClosedDays = document.querySelector("#save-closed-days");
+const adminFacility = document.querySelector("#admin-facility");
 const adminCalendar = document.querySelector("#admin-calendar");
 const adminCalendarMonth = document.querySelector("#admin-calendar-month");
 const staffReservationPanel = document.querySelector("#staff-reservation-panel");
@@ -74,6 +76,9 @@ function message(target, text, type = "", toastText = text) {
   if (type === "error") showOperationModal("処理に失敗しました。", "error");
 }
 function reservationId(facility, room, date, slot) { return `${facility}_${room}_${date}_${slot}`; }
+function reservationStatusLabel(status) {
+  return ({ pending: "受付中", confirmed: "確定", canceled: "取消済", closed: "停止" })[status] || status;
+}
 function validateStaffPhone() {
   const normalized = staffPhone.value.replace(/\D/g, "");
   if (staffPhone.value !== normalized) staffPhone.value = normalized;
@@ -108,14 +113,20 @@ function selectReservation(id) {
 
 function renderList() {
   list.replaceChildren();
-  if (!reservations.size) { list.textContent = "予約はまだありません。"; return; }
+  const pendingCount = [...reservations.values()].filter((reservation) => reservation.status === "pending").length;
+  pendingReservationCount.hidden = pendingCount === 0;
+  pendingReservationCount.textContent = `受付中：${pendingCount}件`;
+  if (!reservations.size) { list.textContent = "この館の予約はまだありません。"; return; }
   for (const [id, reservation] of reservations) {
     const item = document.createElement("button");
     item.type = "button";
-    item.className = `reservation-item${id === selectedId ? " selected" : ""}`;
+    item.className = `reservation-item is-${reservation.status}${id === selectedId ? " selected" : ""}`;
     item.addEventListener("click", () => selectReservation(id));
     const date = document.createElement("strong"); date.textContent = `${reservation.date} ${slotLabel(reservation.slot)} · ${facilityLabel(reservation.facility)} ${roomLabel(reservation.facility, reservation.room)}`;
-    const details = document.createElement("span"); details.textContent = `${reservation.isStaffReservation ? "職員入力 · " : ""}${reservation.customerName || "氏名未入力"} · ${reservation.purpose} · ${reservation.status}`;
+    const details = document.createElement("span"); details.className = "reservation-item-details";
+    const summary = document.createElement("span"); summary.textContent = `${reservation.isStaffReservation ? "職員入力 · " : ""}${reservation.customerName || "氏名未入力"} · ${reservation.purpose}`;
+    const status = document.createElement("span"); status.className = `reservation-status status-${reservation.status}`; status.textContent = reservationStatusLabel(reservation.status);
+    details.append(summary, status);
     item.append(date, details);
     list.append(item);
   }
@@ -123,14 +134,12 @@ function renderList() {
 
 function startReservations() {
   stopListening?.();
-  const reservationsQuery = accessFacility === "all"
-    ? query(collection(db, "reservations"), orderBy("date"), orderBy("slot"))
-    : query(collection(db, "reservations"), where("facility", "==", accessFacility), orderBy("date"), orderBy("slot"));
+  const reservationsQuery = query(collection(db, "reservations"), where("facility", "==", adminFacility.value), orderBy("date"), orderBy("slot"));
   stopListening = onSnapshot(reservationsQuery, (snapshot) => {
     reservations = new Map(snapshot.docs.map((item) => [item.id, item.data()]));
     if (selectedId && !reservations.has(selectedId)) { selectedId = null; editForm.hidden = true; emptyDetail.hidden = false; }
     renderList();
-    message(adminStatus, `${reservations.size}件の予約を表示しています。`);
+    message(adminStatus, `${facilityLabel(adminFacility.value)}の予約を${reservations.size}件表示しています。`);
   }, () => message(adminStatus, "予約一覧を取得できません。権限設定を確認してください。", "error"));
 }
 
@@ -346,6 +355,29 @@ function startClosedDays() {
   }, () => message(adminStatus, "カレンダーの予約状況を取得できません。", "error"));
 }
 
+function changeAdminFacility(facility) {
+  const nextFacility = accessFacility === "all" ? facility : accessFacility;
+  adminFacility.value = nextFacility;
+  closedDaysFacility.value = nextFacility;
+  closedDayFacility.value = nextFacility;
+  if (!staffReservationPanel.hidden) {
+    staffFacility.value = nextFacility;
+    prepareStaffReservationForm();
+  }
+  closurePreview = new Map();
+  renderPreview();
+  startReservations();
+  startClosedDays();
+}
+
+function changeAdminMonth(month) {
+  closedDaysMonth.value = month;
+  closedDayMonth.value = month;
+  closurePreview = new Map();
+  renderPreview();
+  startClosedDays();
+}
+
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = document.querySelector("#login-email").value;
@@ -362,15 +394,14 @@ closedDayTemplateForm.addEventListener("submit", (event) => {
   const month = closedDayMonth.value;
   const [start, end] = monthBounds(month);
   const templateDays = closureTemplates[facility];
+  changeAdminFacility(facility);
+  changeAdminMonth(month);
   closurePreview = new Map();
   for (let date = new Date(`${start}T00:00:00`); localDate(date) <= end; date.setDate(date.getDate() + 1)) {
     const key = localDate(date);
     const metadata = closureMetadata(key);
     if (templateDays.includes(date.getDay()) || metadata.isHoliday) closurePreview.set(key, metadata);
   }
-  closedDaysFacility.value = facility;
-  closedDaysMonth.value = month;
-  startClosedDays();
   renderPreview();
   message(closedDayStatus, `${facilityLabel(facility)}の${month.replace("-", "年")}月分を登録予定として作成しました。内容を確認してください。`);
 });
@@ -420,7 +451,7 @@ function addReservationAudit(batch, action, reservation, id) {
 }
 
 function prepareStaffReservationForm() {
-  const facility = accessFacility === "all" ? staffFacility.value : accessFacility;
+  const facility = accessFacility === "all" ? adminFacility.value : accessFacility;
   staffFacility.value = facility;
   staffFacility.disabled = accessFacility !== "all";
   fillRooms(staffRoom, facility, staffRoom.value);
@@ -438,7 +469,7 @@ document.querySelector("#close-staff-reservation").addEventListener("click", () 
   staffReservationPanel.hidden = true;
   message(staffReservationStatus, "");
 });
-staffFacility.addEventListener("change", () => fillRooms(staffRoom, staffFacility.value));
+staffFacility.addEventListener("change", () => changeAdminFacility(staffFacility.value));
 
 staffReservationForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -498,7 +529,7 @@ editForm.addEventListener("submit", async (event) => {
       status,
     });
     batch.set(doc(db, "availability", selectedId), {
-      slotId: selectedId, facility: reservation.facility, room: reservation.room, date: reservation.date, slot: reservation.slot, status,
+      slotId: selectedId, facility: reservation.facility, room: reservation.room, date: reservation.date, slot: reservation.slot, status: status === "canceled" ? "available" : status,
     }, { merge: true });
     addReservationAudit(batch, "update", reservation, selectedId);
     await batch.commit();
@@ -528,21 +559,15 @@ const currentMonth = localDate(new Date()).slice(0, 7);
 closedDaysMonth.value = currentMonth;
 closedDayMonth.value = currentMonth;
 
-closedDaysFacility.addEventListener("change", () => {
-  closedDayFacility.value = closedDaysFacility.value;
-  closurePreview = new Map(); renderPreview(); startClosedDays();
-});
-closedDaysMonth.addEventListener("change", () => { closedDayMonth.value = closedDaysMonth.value; startClosedDays(); });
-closedDayFacility.addEventListener("change", () => {
-  closedDaysFacility.value = closedDayFacility.value;
-  closurePreview = new Map(); renderPreview(); startClosedDays();
-});
+adminFacility.addEventListener("change", () => changeAdminFacility(adminFacility.value));
+closedDaysFacility.addEventListener("change", () => changeAdminFacility(closedDaysFacility.value));
+closedDayFacility.addEventListener("change", () => changeAdminFacility(closedDayFacility.value));
+closedDaysMonth.addEventListener("change", () => changeAdminMonth(closedDaysMonth.value));
+closedDayMonth.addEventListener("change", () => changeAdminMonth(closedDayMonth.value));
 function shiftClosedDaysMonth(offset) {
   const [year, month] = closedDaysMonth.value.split("-").map(Number);
   const next = new Date(year, month - 1 + offset, 1);
-  closedDaysMonth.value = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
-  closedDayMonth.value = closedDaysMonth.value;
-  startClosedDays();
+  changeAdminMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`);
 }
 document.querySelector("#previous-admin-month").addEventListener("click", () => shiftClosedDaysMonth(-1));
 document.querySelector("#next-admin-month").addEventListener("click", () => shiftClosedDaysMonth(1));
@@ -563,11 +588,13 @@ onAuthStateChanged(auth, async (user) => {
     }
     accessFacility = facility;
     const selectedFacility = facility === "all" ? "higashiyama" : facility;
+    adminFacility.value = selectedFacility;
     closedDaysFacility.value = selectedFacility;
     closedDayFacility.value = selectedFacility;
+    adminFacility.disabled = facility !== "all";
     closedDaysFacility.disabled = facility !== "all";
     closedDayFacility.disabled = facility !== "all";
-    loginPanel.hidden = true; adminPanel.hidden = false; startReservations(); startClosedDays();
+    loginPanel.hidden = true; adminPanel.hidden = false; changeAdminFacility(selectedFacility);
   } catch {
     await signOut(auth);
     message(loginStatus, "職員権限を確認できません。もう一度ログインしてください。", "error");

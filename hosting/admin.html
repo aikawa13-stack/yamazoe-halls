@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260909-phone-validation" />
+    <link rel="stylesheet" href="./styles.css?v=20260909-admin-facility-ui" />
     <title>Yamazoe Halls | 職員管理</title>
   </head>
   <body>
@@ -37,10 +37,19 @@
               <p class="eyebrow">HALL SCHEDULE</p>
               <h2 id="admin-calendar-title">予約・休館日カレンダー</h2>
             </div>
-            <div class="month-controls">
-              <button id="previous-admin-month" class="secondary" type="button" aria-label="前月">←</button>
-              <strong id="admin-calendar-month"></strong>
-              <button id="next-admin-month" class="secondary" type="button" aria-label="次月">→</button>
+            <div class="admin-calendar-tools">
+              <label class="admin-facility-control">館選択
+                <select id="admin-facility" required>
+                  <option value="higashiyama">東山</option>
+                  <option value="hatano">波多野（文化伝習館）</option>
+                  <option value="toyohara">豊原</option>
+                </select>
+              </label>
+              <div class="month-controls">
+                <button id="previous-admin-month" class="secondary" type="button" aria-label="前月">←</button>
+                <strong id="admin-calendar-month"></strong>
+                <button id="next-admin-month" class="secondary" type="button" aria-label="次月">→</button>
+              </div>
             </div>
           </div>
           <p class="calendar-legend"><span class="status-dot available"></span>開館日 <span class="status-dot pending"></span>予約あり <span class="status-dot closed"></span>休館日</p>
@@ -51,16 +60,18 @@
           <h2 id="closed-days-title">休館日管理</h2>
           <p id="closed-day-status" role="status" aria-live="polite"></p>
           <div class="closed-days-workspace">
-            <aside class="closed-days-facility-panel" aria-label="館選択">
-              <h3>館選択</h3>
-              <label>館
-                <select id="closed-days-facility" required>
-                  <option value="higashiyama">東山</option>
-                  <option value="hatano">波多野（文化伝習館）</option>
-                  <option value="toyohara">豊原</option>
-                </select>
-              </label>
-              <label>表示月<input id="closed-days-month" type="month" required /></label>
+            <aside class="closed-days-facility-panel" aria-label="休館日表示設定">
+              <h3>表示設定</h3>
+              <div class="closed-days-filter-row">
+                <label>館名
+                  <select id="closed-days-facility" required>
+                    <option value="higashiyama">東山</option>
+                    <option value="hatano">波多野（文化伝習館）</option>
+                    <option value="toyohara">豊原</option>
+                  </select>
+                </label>
+                <label>対象月<input id="closed-days-month" type="month" required /></label>
+              </div>
             </aside>
             <section class="closed-days-list-panel" aria-labelledby="closed-days-list-title">
               <h3 id="closed-days-list-title">休館日一覧</h3>
@@ -68,7 +79,7 @@
             </section>
             <section class="closed-days-register-panel" aria-labelledby="closed-days-register-title">
               <h3 id="closed-days-register-title">休館日登録</h3>
-              <form id="closed-day-template-form" class="stack-form">
+              <form id="closed-day-template-form" class="template-controls">
                 <label>館名
                   <select id="closed-day-facility" required>
                     <option value="higashiyama">東山</option>
@@ -112,7 +123,10 @@
         </section>
         <div class="admin-layout">
           <section class="card reservation-list-wrap" aria-label="予約一覧">
-            <div class="reservation-list-heading"><h2>予約一覧</h2><button id="open-staff-reservation" type="button">職員予約の新規作成</button></div>
+            <div class="reservation-list-heading">
+              <div><h2>予約一覧</h2><p id="pending-reservation-count" class="pending-reservation-count" hidden></p></div>
+              <button id="open-staff-reservation" type="button">職員予約の新規作成</button>
+            </div>
             <div id="reservation-list"></div>
           </section>
           <section class="card" aria-labelledby="edit-title">
@@ -125,7 +139,7 @@
               <label>氏名<input id="edit-name" maxlength="80" required /></label>
               <label>電話番号<input id="edit-phone" maxlength="30" required /></label>
               <label>利用目的<textarea id="edit-purpose" maxlength="200" rows="3" required></textarea></label>
-              <label>状態<select id="edit-status" required><option value="pending">受付中</option><option value="confirmed">確定</option><option value="closed">停止</option></select></label>
+              <label>状態<select id="edit-status" required><option value="pending">受付中</option><option value="confirmed">確定</option><option value="canceled">取消済</option><option value="closed">停止</option></select></label>
               <label>備考<textarea id="edit-notes" maxlength="500" rows="4"></textarea></label>
               <div class="admin-actions"><button type="submit">変更を保存</button><button id="delete-reservation" class="danger" type="button">予約を削除</button></div>
               <p class="hint">館・施設（部屋）・利用日・利用区分を変更する場合は、現在の予約を削除して新しい枠を作成してください。</p>
@@ -138,6 +152,6 @@
     <div id="admin-operation-modal" class="admin-operation-modal" aria-live="polite" aria-atomic="true" hidden>
       <div class="admin-operation-modal__panel" role="status"></div>
     </div>
-    <script type="module" src="./admin.js?v=20260909-phone-validation"></script>
+    <script type="module" src="./admin.js?v=20260909-admin-facility-ui"></script>
   </body>
 </html>
