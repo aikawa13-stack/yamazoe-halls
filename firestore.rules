@@ -73,8 +73,42 @@ service cloud.firestore {
              request.resource.data.createdAt == request.time;
     }
 
+    function isValidClosedDay(closedDayId) {
+      return request.resource.data.keys().hasAll([
+               "facilityId", "date", "weekday", "isHoliday", "holidayName", "createdBy", "createdAt"
+             ]) &&
+             request.resource.data.keys().hasOnly([
+               "facilityId", "date", "weekday", "isHoliday", "holidayName", "createdBy", "createdAt"
+             ]) &&
+             closedDayId.matches("^(higashiyama|hatano|toyohara)_[0-9]{8}$") &&
+             request.resource.data.facilityId in ["higashiyama", "hatano", "toyohara"] &&
+             request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") &&
+             request.resource.data.weekday in ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] &&
+             request.resource.data.isHoliday is bool &&
+             request.resource.data.holidayName is string &&
+             request.resource.data.holidayName.size() <= 80 &&
+             request.resource.data.createdBy == request.auth.token.email &&
+             request.resource.data.createdAt == request.time;
+    }
+
+    function isValidClosureAvailability(closureId) {
+      return request.resource.data.keys().hasOnly(["facilityId", "date"]) &&
+             request.resource.data.facilityId in ["higashiyama", "hatano", "toyohara"] &&
+             request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") &&
+             closureId == request.resource.data.facilityId + "_" + request.resource.data.date;
+    }
+
+    function isValidClosureAudit() {
+      return request.resource.data.keys().hasOnly(["action", "facilityId", "date", "deletedBy", "deletedAt"]) &&
+             request.resource.data.action == "delete" &&
+             request.resource.data.facilityId in ["higashiyama", "hatano", "toyohara"] &&
+             request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") &&
+             request.resource.data.deletedBy == request.auth.token.email &&
+             request.resource.data.deletedAt == request.time;
+    }
+
     function isClosedDay(facility, date) {
-      return exists(/databases/$(database)/documents/closed_days/$(facility)/dates/$(date));
+      return exists(/databases/$(database)/documents/closureAvailability/$(facility + "_" + date));
     }
 
     // The document ID fixes the facility, room, date, and usage category. A slot
@@ -100,10 +134,23 @@ service cloud.firestore {
       allow update, delete: if managesFacility(resource.data.facility);
     }
 
-    match /closed_days/{facility}/dates/{date} {
-      // A closure contains no personal data and is used by the public calendar.
+    match /closedDays/{closedDayId} {
+      // Staff-only data includes the member who registered the closure.
+      allow read: if managesFacility(resource.data.facilityId);
+      allow create: if managesFacility(request.resource.data.facilityId) && isValidClosedDay(closedDayId);
+      allow delete: if managesFacility(resource.data.facilityId);
+    }
+
+    match /closureAvailability/{closureId} {
+      // Public calendar data deliberately excludes staff email and audit fields.
       allow read: if true;
-      allow create, update, delete: if managesFacility(facility);
+      allow create: if managesFacility(request.resource.data.facilityId) && isValidClosureAvailability(closureId);
+      allow delete: if managesFacility(resource.data.facilityId);
+    }
+
+    match /closedDayAuditLogs/{auditId} {
+      allow read: if managesFacility(resource.data.facilityId);
+      allow create: if managesFacility(request.resource.data.facilityId) && isValidClosureAudit();
     }
 
     // The public form has no access to other collections.

@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, getIdTokenResult, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-import { collection, collectionGroup, deleteDoc, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { facilityLabel, roomLabel, roomsFor, slotLabel } from "./config.js";
 
 const firebaseConfig = {
@@ -21,14 +21,25 @@ const adminStatus = document.querySelector("#admin-status");
 const list = document.querySelector("#reservation-list");
 const editForm = document.querySelector("#edit-form");
 const emptyDetail = document.querySelector("#empty-detail");
-const closedDayForm = document.querySelector("#closed-day-form");
+const closedDayTemplateForm = document.querySelector("#closed-day-template-form");
+const closedDayIndividualForm = document.querySelector("#closed-day-individual-form");
 const closedDayStatus = document.querySelector("#closed-day-status");
 const closedDayList = document.querySelector("#closed-day-list");
+const closedDaysFacility = document.querySelector("#closed-days-facility");
+const closedDaysMonth = document.querySelector("#closed-days-month");
+const closedDayFacility = document.querySelector("#closed-day-facility");
+const closedDayMonth = document.querySelector("#closed-day-month");
+const closedDayDate = document.querySelector("#closed-day-date");
+const closedDayPreview = document.querySelector("#closed-day-preview");
+const closedDayPreviewCount = document.querySelector("#closed-day-preview-count");
+const saveClosedDays = document.querySelector("#save-closed-days");
 let selectedId = null;
 let reservations = new Map();
 let stopListening = null;
 let stopClosedDays = null;
 let accessFacility = null;
+let configuredClosedDays = new Map();
+let closurePreview = new Map();
 
 function message(target, text, type = "") { target.textContent = text; target.className = type; }
 
@@ -83,18 +94,127 @@ function startReservations() {
   }, () => message(adminStatus, "予約一覧を取得できません。権限設定を確認してください。", "error"));
 }
 
+const closureTemplates = {
+  higashiyama: [1, 5, 6],
+  hatano: [1, 2, 5],
+  toyohara: [1, 5],
+};
+const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+
+function localDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function closureId(facilityId, date) { return `${facilityId}_${date.replaceAll("-", "")}`; }
+function publicClosureId(facilityId, date) { return `${facilityId}_${date}`; }
+
+function monthBounds(month) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const start = new Date(year, monthNumber - 1, 1);
+  const end = new Date(year, monthNumber, 0);
+  return [localDate(start), localDate(end)];
+}
+
+function nthWeekday(year, month, weekday, occurrence) {
+  const date = new Date(year, month - 1, 1);
+  date.setDate(1 + ((weekday - date.getDay() + 7) % 7) + 7 * (occurrence - 1));
+  return localDate(date);
+}
+
+function equinoxDay(year, autumn = false) {
+  const base = autumn ? 23.2488 : 20.8431;
+  return Math.floor(base + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+}
+
+function japaneseHolidays(year) {
+  const holidays = new Map();
+  const add = (month, day, name) => holidays.set(localDate(new Date(year, month - 1, day)), name);
+  const addDate = (date, name) => holidays.set(date, name);
+  add(1, 1, "元日");
+  addDate(nthWeekday(year, 1, 1, 2), "成人の日");
+  add(2, 11, "建国記念の日");
+  add(2, 23, "天皇誕生日");
+  add(3, equinoxDay(year), "春分の日");
+  add(4, 29, "昭和の日");
+  add(5, 3, "憲法記念日");
+  add(5, 4, "みどりの日");
+  add(5, 5, "こどもの日");
+  addDate(nthWeekday(year, 7, 1, 3), "海の日");
+  add(8, 11, "山の日");
+  addDate(nthWeekday(year, 9, 1, 3), "敬老の日");
+  add(9, equinoxDay(year, true), "秋分の日");
+  addDate(nthWeekday(year, 10, 1, 2), "スポーツの日");
+  add(11, 3, "文化の日");
+  add(11, 23, "勤労感謝の日");
+
+  for (const [date, name] of [...holidays]) {
+    const original = new Date(`${date}T00:00:00`);
+    if (original.getDay() !== 0) continue;
+    const substitute = new Date(original);
+    do { substitute.setDate(substitute.getDate() + 1); } while (holidays.has(localDate(substitute)));
+    addDate(localDate(substitute), `振替休日（${name}）`);
+  }
+  for (let date = new Date(year, 0, 2); date < new Date(year, 11, 31); date.setDate(date.getDate() + 1)) {
+    const key = localDate(date);
+    const previous = new Date(date); previous.setDate(previous.getDate() - 1);
+    const next = new Date(date); next.setDate(next.getDate() + 1);
+    if (date.getDay() !== 0 && !holidays.has(key) && holidays.has(localDate(previous)) && holidays.has(localDate(next))) addDate(key, "国民の休日");
+  }
+  return holidays;
+}
+
+function closureMetadata(date) {
+  const [year] = date.split("-").map(Number);
+  const holidayName = japaneseHolidays(year).get(date) || "";
+  const day = new Date(`${date}T00:00:00`).getDay();
+  return { date, weekday: weekdays[day], weekdayLabel: weekdayLabels[day], isHoliday: Boolean(holidayName), holidayName };
+}
+
+function formatTimestamp(value) {
+  if (!value?.toDate) return "保存中…";
+  return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short" }).format(value.toDate());
+}
+
+function renderPreview() {
+  closedDayPreview.replaceChildren();
+  const entries = [...closurePreview.values()].sort((a, b) => a.date.localeCompare(b.date));
+  closedDayPreviewCount.textContent = entries.length ? `${entries.length}日` : "";
+  saveClosedDays.disabled = entries.length === 0;
+  if (!entries.length) { closedDayPreview.textContent = "テンプレートを適用するか、個別の日付を追加してください。"; return; }
+  for (const entry of entries) {
+    const row = document.createElement("div"); row.className = "closed-day-preview-item";
+    const text = document.createElement("span");
+    text.textContent = `${entry.date}（${entry.weekdayLabel}）${entry.holidayName ? ` · ${entry.holidayName}` : ""}`;
+    const remove = document.createElement("button"); remove.type = "button"; remove.className = "secondary"; remove.textContent = "除外";
+    remove.addEventListener("click", () => { closurePreview.delete(entry.date); renderPreview(); });
+    row.append(text, remove); closedDayPreview.append(row);
+  }
+}
+
 function renderClosedDays(days) {
   closedDayList.replaceChildren();
   if (!days.length) { closedDayList.textContent = "設定済みの休館日はありません。"; return; }
   for (const day of days) {
+    const data = day.data();
     const item = document.createElement("div");
     item.className = "closed-day-item";
-    const label = document.createElement("span"); label.textContent = `${facilityLabel(day.data().facility)} · ${day.data().date}`;
-    const button = document.createElement("button"); button.className = "secondary"; button.type = "button"; button.textContent = "解除";
+    const label = document.createElement("span"); label.className = "closed-day-details";
+    label.textContent = `${data.date}（${weekdayLabels[weekdays.indexOf(data.weekday)] || "—"}） · ${data.holidayName || "祝日ではありません"} · ${data.createdBy || "—"} · ${formatTimestamp(data.createdAt)}`;
+    const button = document.createElement("button"); button.className = "secondary"; button.type = "button"; button.textContent = "削除";
     button.addEventListener("click", async () => {
-      if (!window.confirm(`${label.textContent} を休館日から解除しますか？`)) return;
-      try { await deleteDoc(day.ref); message(closedDayStatus, "休館日を解除しました。", "success"); }
-      catch { message(closedDayStatus, "休館日を解除できません。職員権限を確認してください。", "error"); }
+      if (!window.confirm(`${data.date} を休館日から削除し、開館扱いにしますか？`)) return;
+      try {
+        const batch = writeBatch(db);
+        batch.delete(day.ref);
+        batch.delete(doc(db, "closureAvailability", publicClosureId(data.facilityId, data.date)));
+        batch.set(doc(collection(db, "closedDayAuditLogs")), {
+          action: "delete", facilityId: data.facilityId, date: data.date,
+          deletedBy: auth.currentUser.email, deletedAt: serverTimestamp(),
+        });
+        await batch.commit();
+        message(closedDayStatus, "休館日を削除し、開館扱いにしました。", "success");
+      } catch { message(closedDayStatus, "休館日を削除できません。職員権限を確認してください。", "error"); }
     });
     item.append(label, button); closedDayList.append(item);
   }
@@ -102,10 +222,13 @@ function renderClosedDays(days) {
 
 function startClosedDays() {
   stopClosedDays?.();
-  const closedDaysQuery = accessFacility === "all"
-    ? query(collectionGroup(db, "dates"), orderBy("date"))
-    : query(collection(db, "closed_days", accessFacility, "dates"), orderBy("date"));
-  stopClosedDays = onSnapshot(closedDaysQuery, (snapshot) => renderClosedDays(snapshot.docs), () => {
+  const facilityId = closedDaysFacility.value;
+  const [start, end] = monthBounds(closedDaysMonth.value);
+  const closedDaysQuery = query(collection(db, "closedDays"), where("facilityId", "==", facilityId), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
+  stopClosedDays = onSnapshot(closedDaysQuery, (snapshot) => {
+    configuredClosedDays = new Map(snapshot.docs.map((item) => [item.id, item]));
+    renderClosedDays(snapshot.docs);
+  }, () => {
     message(closedDayStatus, "休館日一覧を取得できません。職員権限を確認してください。", "error");
   });
 }
@@ -119,15 +242,60 @@ loginForm.addEventListener("submit", async (event) => {
   catch { message(loginStatus, "メールアドレスまたはパスワードを確認してください。", "error"); }
 });
 
-closedDayForm.addEventListener("submit", async (event) => {
+closedDayTemplateForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!closedDayForm.reportValidity()) return;
-  const facility = document.querySelector("#closed-day-facility").value;
-  const date = document.querySelector("#closed-day-date").value;
+  if (!closedDayTemplateForm.reportValidity()) return;
+  const facility = closedDayFacility.value;
+  const month = closedDayMonth.value;
+  const [start, end] = monthBounds(month);
+  const templateDays = closureTemplates[facility];
+  closurePreview = new Map();
+  for (let date = new Date(`${start}T00:00:00`); localDate(date) <= end; date.setDate(date.getDate() + 1)) {
+    const key = localDate(date);
+    const metadata = closureMetadata(key);
+    if (templateDays.includes(date.getDay()) || metadata.isHoliday) closurePreview.set(key, metadata);
+  }
+  closedDaysFacility.value = facility;
+  closedDaysMonth.value = month;
+  startClosedDays();
+  renderPreview();
+  message(closedDayStatus, `${facilityLabel(facility)}の${month.replace("-", "年")}月分を登録予定として作成しました。内容を確認してください。`);
+});
+
+closedDayIndividualForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!closedDayIndividualForm.reportValidity()) return;
+  const date = closedDayDate.value;
+  closurePreview.set(date, closureMetadata(date));
+  renderPreview();
+  message(closedDayStatus, `${date} を登録予定に追加しました。`);
+});
+
+saveClosedDays.addEventListener("click", async () => {
+  const facilityId = closedDayFacility.value;
+  const email = auth.currentUser?.email;
+  const entries = [...closurePreview.values()].filter((entry) => !configuredClosedDays.has(closureId(facilityId, entry.date)));
+  if (!email || !entries.length) {
+    message(closedDayStatus, "登録する新しい休館日がありません。", "error");
+    return;
+  }
+  saveClosedDays.disabled = true;
   try {
-    await setDoc(doc(db, "closed_days", facility, "dates", date), { facility, date, createdAt: serverTimestamp() });
-    message(closedDayStatus, "休館日に設定しました。", "success");
-  } catch { message(closedDayStatus, "休館日を設定できません。職員権限を確認してください。", "error"); }
+    const batch = writeBatch(db);
+    for (const entry of entries) {
+      const id = closureId(facilityId, entry.date);
+      batch.set(doc(db, "closedDays", id), {
+        facilityId, date: entry.date, weekday: entry.weekday,
+        isHoliday: entry.isHoliday, holidayName: entry.holidayName,
+        createdBy: email, createdAt: serverTimestamp(),
+      });
+      batch.set(doc(db, "closureAvailability", publicClosureId(facilityId, entry.date)), { facilityId, date: entry.date });
+    }
+    await batch.commit();
+    closurePreview = new Map(); renderPreview();
+    message(closedDayStatus, `${entries.length}日分の休館日を登録しました。`, "success");
+  } catch { message(closedDayStatus, "休館日を登録できません。職員権限を確認してください。", "error"); }
+  finally { renderPreview(); }
 });
 
 editForm.addEventListener("submit", async (event) => {
@@ -166,6 +334,20 @@ document.querySelector("#delete-reservation").addEventListener("click", async ()
 
 document.querySelector("#sign-out").addEventListener("click", () => signOut(auth));
 
+const currentMonth = localDate(new Date()).slice(0, 7);
+closedDaysMonth.value = currentMonth;
+closedDayMonth.value = currentMonth;
+
+closedDaysFacility.addEventListener("change", () => {
+  closedDayFacility.value = closedDaysFacility.value;
+  closurePreview = new Map(); renderPreview(); startClosedDays();
+});
+closedDaysMonth.addEventListener("change", () => startClosedDays());
+closedDayFacility.addEventListener("change", () => {
+  closedDaysFacility.value = closedDayFacility.value;
+  closurePreview = new Map(); renderPreview(); startClosedDays();
+});
+
 onAuthStateChanged(auth, async (user) => {
   stopListening?.(); stopListening = null; stopClosedDays?.(); stopClosedDays = null; selectedId = null;
   if (!user) { loginPanel.hidden = false; adminPanel.hidden = true; return; }
@@ -181,8 +363,10 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
     accessFacility = facility;
-    const closedDayFacility = document.querySelector("#closed-day-facility");
-    closedDayFacility.value = facility === "all" ? "higashiyama" : facility;
+    const selectedFacility = facility === "all" ? "higashiyama" : facility;
+    closedDaysFacility.value = selectedFacility;
+    closedDayFacility.value = selectedFacility;
+    closedDaysFacility.disabled = facility !== "all";
     closedDayFacility.disabled = facility !== "all";
     loginPanel.hidden = true; adminPanel.hidden = false; startReservations(); startClosedDays();
   } catch {

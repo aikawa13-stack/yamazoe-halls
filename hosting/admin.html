@@ -33,13 +33,45 @@
         <p id="admin-status" role="status" aria-live="polite"></p>
         <section class="card closed-days-card" aria-labelledby="closed-days-title">
           <h2 id="closed-days-title">休館日管理</h2>
-          <form id="closed-day-form" class="closed-day-form">
-            <label>館<select id="closed-day-facility" required><option value="higashiyama">東山</option><option value="hatano">波多野（文化伝習館）</option><option value="toyohara">豊原</option></select></label>
-            <label>休館日<input id="closed-day-date" type="date" required /></label>
-            <button type="submit">休館日に設定</button>
-          </form>
           <p id="closed-day-status" role="status" aria-live="polite"></p>
-          <div id="closed-day-list" class="closed-day-list" aria-label="設定済み休館日"></div>
+          <div class="closed-days-workspace">
+            <aside class="closed-days-facility-panel" aria-label="館選択">
+              <h3>館選択</h3>
+              <label>館
+                <select id="closed-days-facility" required>
+                  <option value="higashiyama">東山</option>
+                  <option value="hatano">波多野（文化伝習館）</option>
+                  <option value="toyohara">豊原</option>
+                </select>
+              </label>
+              <label>表示月<input id="closed-days-month" type="month" required /></label>
+            </aside>
+            <section class="closed-days-list-panel" aria-labelledby="closed-days-list-title">
+              <h3 id="closed-days-list-title">休館日一覧</h3>
+              <div id="closed-day-list" class="closed-day-list" aria-label="設定済み休館日"></div>
+            </section>
+            <section class="closed-days-register-panel" aria-labelledby="closed-days-register-title">
+              <h3 id="closed-days-register-title">休館日登録</h3>
+              <form id="closed-day-template-form" class="stack-form">
+                <label>館名
+                  <select id="closed-day-facility" required>
+                    <option value="higashiyama">東山</option>
+                    <option value="hatano">波多野（文化伝習館）</option>
+                    <option value="toyohara">豊原</option>
+                  </select>
+                </label>
+                <label>対象月<input id="closed-day-month" type="month" required /></label>
+                <button type="submit">テンプレート適用</button>
+              </form>
+              <form id="closed-day-individual-form" class="individual-closed-day-form">
+                <label>個別追加<input id="closed-day-date" type="date" required /></label>
+                <button class="secondary" type="submit">一覧へ追加</button>
+              </form>
+              <div class="closure-preview-heading"><h4>登録予定</h4><span id="closed-day-preview-count"></span></div>
+              <div id="closed-day-preview" class="closed-day-preview" aria-live="polite"></div>
+              <button id="save-closed-days" type="button" disabled>登録する</button>
+            </section>
+          </div>
         </section>
         <div class="admin-layout">
           <section class="card reservation-list-wrap" aria-label="予約一覧"><div id="reservation-list"></div></section>

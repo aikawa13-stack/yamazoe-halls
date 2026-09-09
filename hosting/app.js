@@ -106,7 +106,7 @@ function listenCalendarData() {
   setMessage(availabilityStatus, "空き状況を読み込んでいます…");
   const availabilityQuery = query(collection(db, "availability"), where("facility", "==", selectedFacility), where("room", "==", selectedRoom), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
   stopAvailability = onSnapshot(availabilityQuery, (snapshot) => { availability = new Map(snapshot.docs.map((item) => [item.id, item.data()])); renderCalendar(); renderSlots(); setMessage(availabilityStatus, "青は空き、灰色は受付中、赤は停止です。", "success"); }, () => setMessage(availabilityStatus, "予約状況を取得できません。しばらくしてからお試しください。", "error"));
-  const closedQuery = query(collection(db, "closed_days", selectedFacility, "dates"), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
+  const closedQuery = query(collection(db, "closureAvailability"), where("facilityId", "==", selectedFacility), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
   stopClosedDays = onSnapshot(closedQuery, (snapshot) => { closedDays = new Set(snapshot.docs.map((item) => item.data().date)); renderCalendar(); renderSlots(); setMessage(availabilityStatus, "青は空き、灰色は受付中、赤は停止です。", "success"); }, () => setMessage(availabilityStatus, "休館日情報を取得できません。しばらくしてからお試しください。", "error"));
 }
 
