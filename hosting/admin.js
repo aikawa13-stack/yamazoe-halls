@@ -32,6 +32,7 @@ const closedDaysMonth = document.querySelector("#closed-days-month");
 const closedDaysMonthLabel = document.querySelector("#closed-days-month-label");
 const closedDayFacility = document.querySelector("#closed-day-facility");
 const closedDayMonth = document.querySelector("#closed-day-month");
+const closedDayMonthLabel = document.querySelector("#closed-day-month-label");
 const closedDayDate = document.querySelector("#closed-day-date");
 const closedDayPreview = document.querySelector("#closed-day-preview");
 const closedDayPreviewCount = document.querySelector("#closed-day-preview-count");
@@ -204,6 +205,11 @@ function monthBounds(month) {
 function renderClosedDaysMonthLabel() {
   const [year, month] = closedDaysMonth.value.split("-").map(Number);
   closedDaysMonthLabel.textContent = `${year}年${month}月`;
+  closedDayMonthLabel.textContent = `${year}年${month}月`;
+  const [start, end] = monthBounds(closedDaysMonth.value);
+  closedDayDate.min = start;
+  closedDayDate.max = end;
+  if (!closedDayDate.value || closedDayDate.value < start || closedDayDate.value > end) closedDayDate.value = start;
 }
 
 function nthWeekday(year, month, weekday, occurrence) {
@@ -616,6 +622,8 @@ document.querySelector("#previous-admin-month").addEventListener("click", () => 
 document.querySelector("#next-admin-month").addEventListener("click", () => shiftClosedDaysMonth(1));
 document.querySelector("#previous-closed-days-month").addEventListener("click", () => shiftClosedDaysMonth(-1));
 document.querySelector("#next-closed-days-month").addEventListener("click", () => shiftClosedDaysMonth(1));
+document.querySelector("#previous-template-month").addEventListener("click", () => shiftClosedDaysMonth(-1));
+document.querySelector("#next-template-month").addEventListener("click", () => shiftClosedDaysMonth(1));
 
 onAuthStateChanged(auth, async (user) => {
   stopListening?.(); stopListening = null; stopPendingSummary?.(); stopPendingSummary = null; stopClosedDays?.(); stopClosedDays = null; stopAdminAvailability?.(); stopAdminAvailability = null; selectedId = null;

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260909-admin-summary-ui" />
+    <link rel="stylesheet" href="./styles.css?v=20260909-closure-month-ui" />
     <title>Yamazoe Halls | 職員管理</title>
   </head>
   <body>
@@ -95,7 +95,14 @@
                     <option value="toyohara">豊原</option>
                   </select>
                 </label>
-                <label>対象月<input id="closed-day-month" type="month" required /></label>
+                <div class="template-month-picker">
+                  <label>対象月<input id="closed-day-month" type="month" required /></label>
+                  <div class="template-month-nav" aria-label="休館日登録の対象月移動">
+                    <button id="previous-template-month" class="secondary" type="button" aria-label="前月">←</button>
+                    <strong id="closed-day-month-label"></strong>
+                    <button id="next-template-month" class="secondary" type="button" aria-label="次月">→</button>
+                  </div>
+                </div>
                 <button type="submit">テンプレート適用</button>
               </form>
               <form id="closed-day-individual-form" class="individual-closed-day-form">
@@ -160,6 +167,6 @@
     <div id="admin-operation-modal" class="admin-operation-modal" aria-live="polite" aria-atomic="true" hidden>
       <div class="admin-operation-modal__panel" role="status"></div>
     </div>
-    <script type="module" src="./admin.js?v=20260909-admin-summary-ui"></script>
+    <script type="module" src="./admin.js?v=20260909-closure-month-ui"></script>
   </body>
 </html>
