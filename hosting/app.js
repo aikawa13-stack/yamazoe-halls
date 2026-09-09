@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-import { collection, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, doc, getDoc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { facilityLabel, roomLabel, roomsFor, slots } from "./config.js";
 
 const firebaseConfig = { apiKey: "AIzaSyB4RYPAvnwets8LI6Vefnuxc_eC7ftymig", authDomain: "yamazoe-halls-staging.firebaseapp.com", projectId: "yamazoe-halls-staging", appId: "1:715762011677:web:e31b304a036c23f64240f4" };
@@ -32,6 +32,7 @@ dateInput.value = selectedDate;
 
 function localDate(date) { const local = new Date(date); local.setMinutes(local.getMinutes() - local.getTimezoneOffset()); return local.toISOString().slice(0, 10); }
 function reservationId(facility, room, date, slot) { return `${facility}_${room}_${date}_${slot}`; }
+function closureAvailabilityId(facility, date) { return `${facility}_${date}`; }
 function setMessage(target, message, type = "") { target.textContent = message; target.className = type; }
 function fillRooms(select, facility, selected = "") {
   select.replaceChildren();
@@ -124,8 +125,29 @@ form.addEventListener("submit", async (event) => {
   const reservation = { slotId: id, facility, room, date, slot, customerName: String(data.get("customerName")).trim(), phone: String(data.get("phone")).trim(), purpose: String(data.get("purpose")).trim(), notes: String(data.get("notes")).trim(), status: "pending", createdAt };
   const availabilityRecord = { slotId: id, facility, room, date, slot, status: "pending", createdAt };
   submitButton.disabled = true; setMessage(formStatus, "予約を送信しています…");
-  try { const batch = writeBatch(db); batch.set(doc(db, "reservations", id), reservation); batch.set(doc(db, "availability", id), availabilityRecord); await batch.commit(); form.reset(); formFacility.value = selectedFacility; fillRooms(formRoom, selectedFacility, selectedRoom); dateInput.value = selectedDate; setMessage(formStatus, "予約リクエストを受け付けました。内容を確認のうえご連絡します。", "success"); }
-  catch (error) { console.error("Reservation submission failed", error); setMessage(formStatus, "この施設・利用日・利用区分は受付できない可能性があります。別の予約枠を選んで再度お試しください。", "error"); }
+  try {
+    const [existingAvailability, closure] = await Promise.all([
+      getDoc(doc(db, "availability", id)),
+      getDoc(doc(db, "closureAvailability", closureAvailabilityId(facility, date))),
+    ]);
+    if (closure.exists()) {
+      closedDays.add(date); renderCalendar(); renderSlots();
+      setMessage(formStatus, "選択した利用日は休館日のため予約できません。別の日付を選択してください。", "error");
+      return;
+    }
+    if (existingAvailability.exists()) {
+      availability.set(id, existingAvailability.data()); renderCalendar(); renderSlots();
+      setMessage(formStatus, "選択した館・施設・利用日・利用区分はすでに受付済みです。別の予約枠を選択してください。", "error");
+      return;
+    }
+    const batch = writeBatch(db);
+    batch.set(doc(db, "reservations", id), reservation);
+    batch.set(doc(db, "availability", id), availabilityRecord);
+    await batch.commit();
+    form.reset(); formFacility.value = selectedFacility; fillRooms(formRoom, selectedFacility, selectedRoom); dateInput.value = selectedDate;
+    setMessage(formStatus, "予約リクエストを受け付けました。内容を確認のうえご連絡します。", "success");
+  }
+  catch (error) { console.error("Reservation submission failed", error); setMessage(formStatus, "予約を受け付けられませんでした。ページを再読み込みして、空き状況を確認してから再度お試しください。", "error"); }
   finally { submitButton.disabled = false; }
 });
 

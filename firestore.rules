@@ -14,6 +14,13 @@ service cloud.firestore {
       return isManager() || (isAdmin() && request.auth.token.role == "staff" && request.auth.token.facility == facility);
     }
 
+    // A visitor is normally anonymous, but an authenticated staff member can
+    // also open the public form from the same browser session. In that case,
+    // retain the public-form validation and limit staff to their own facility.
+    function canSubmitPublicReservation(facility) {
+      return request.auth == null || (isAdmin() && managesFacility(facility));
+    }
+
     function isValidRoom(facility, room) {
       return (facility == "higashiyama" && room in [
                "higashiyama_1f_large_meeting_room", "higashiyama_1f_cooking_practice_room",
@@ -170,7 +177,7 @@ service cloud.firestore {
     match /reservations/{slotId} {
       // Public creation must atomically add the matching non-private
       // availability record. This keeps reservation details private.
-      allow create: if (request.auth == null && resource == null &&
+      allow create: if (canSubmitPublicReservation(request.resource.data.facility) && resource == null &&
         isValidReservation(slotId) &&
         !isClosedDay(request.resource.data.facility, request.resource.data.date) &&
         getAfter(/databases/$(database)/documents/availability/$(slotId)).data.slotId == slotId) ||
@@ -189,7 +196,7 @@ service cloud.firestore {
       allow create: if (isAdmin() && managesFacility(request.resource.data.facility) &&
         isValidStaffAvailability(slotId) &&
         getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.slotId == slotId &&
-        getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.status == "confirmed") || (request.auth == null && resource == null &&
+        getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.status == "confirmed") || (canSubmitPublicReservation(request.resource.data.facility) && resource == null &&
         isValidAvailability(slotId) &&
         getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.slotId == slotId &&
         getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.status == "pending");
