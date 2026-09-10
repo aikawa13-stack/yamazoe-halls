@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260909-closure-register-layout" />
+    <link rel="stylesheet" href="./styles.css?v=20260910-reservation-stack" />
     <title>Yamazoe Halls | 職員管理</title>
   </head>
   <body>
@@ -53,7 +53,7 @@
               </div>
             </div>
           </div>
-          <p class="calendar-legend"><span class="status-dot available"></span>開館日 <span class="status-dot pending"></span>予約あり <span class="status-dot closed"></span>休館日</p>
+          <p class="calendar-legend"><span class="status-dot available"></span>開館日 <span class="status-dot pending"></span>予約あり <span class="status-dot stopped"></span>停止 <span class="status-dot closed"></span>休館日</p>
           <p class="hint">日付を選択すると、開館日は休館日に設定し、休館日は例外開館として削除できます。予約ありは館内のいずれかの部屋に予約がある日です。</p>
           <div id="admin-calendar" class="calendar" aria-label="職員用予約・休館日カレンダー"></div>
         </section>
@@ -154,7 +154,7 @@
               <label>氏名<input id="edit-name" maxlength="80" required /></label>
               <label>電話番号<input id="edit-phone" maxlength="30" required /></label>
               <label>利用目的<textarea id="edit-purpose" maxlength="200" rows="3" required></textarea></label>
-              <label>状態<select id="edit-status" required><option value="pending">受付中</option><option value="confirmed">確定</option><option value="canceled">取消済</option><option value="closed">停止</option></select></label>
+              <label>状態<select id="edit-status" required><option value="pending">受付中</option><option value="confirmed">確定</option><option value="canceled">取消済</option><option value="stopped">停止</option><option value="closed">停止（旧データ）</option></select></label>
               <label>備考<textarea id="edit-notes" maxlength="500" rows="4"></textarea></label>
               <div class="admin-actions"><button type="submit">変更を保存</button><button id="revive-reservation" class="secondary" type="button" hidden>復活する</button><button id="delete-reservation" class="danger" type="button">予約を削除</button></div>
               <p id="revival-status" class="hint" role="status" hidden></p>
@@ -168,6 +168,6 @@
     <div id="admin-operation-modal" class="admin-operation-modal" aria-live="polite" aria-atomic="true" hidden>
       <div class="admin-operation-modal__panel" role="status"></div>
     </div>
-    <script type="module" src="./admin.js?v=20260910-delete-permission-message"></script>
+    <script type="module" src="./admin.js?v=20260910-reservation-stack"></script>
   </body>
 </html>

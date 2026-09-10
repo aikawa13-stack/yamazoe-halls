@@ -46,6 +46,17 @@ function reservationRecordId(slotId) {
   const suffix = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `${slotId}__${suffix}`;
 }
+const partialDaySlots = ["morning", "afternoon", "night"];
+function conflictingSlots(slot) {
+  return slot === "all_day" ? partialDaySlots : partialDaySlots.includes(slot) ? ["all_day"] : [];
+}
+function storedAvailabilityStatus(facility, room, date, slot) {
+  const status = availability.get(reservationId(facility, room, date, slot))?.status || "available";
+  return status === "closed" ? "stopped" : status;
+}
+function hasSlotConflict(facility, room, date, slot) {
+  return conflictingSlots(slot).some((otherSlot) => storedAvailabilityStatus(facility, room, date, otherSlot) !== "available");
+}
 function closureAvailabilityId(facility, date) { return `${facility}_${date}`; }
 function closedDayRef(facility, date) { return doc(db, "closed_days", facility, "dates", date); }
 function stoppedDayRef(facility, room, date) { return doc(db, "stopped_days", facility, "rooms", room, "dates", date); }
@@ -87,18 +98,19 @@ function monthBounds() { const start = localDate(displayedMonth); const end = ne
 function statusFor(date, slot) {
   if (closedDays.has(date)) return "closed";
   if (stoppedDays.has(date)) return "stopped";
-  const status = availability.get(reservationId(selectedFacility, selectedRoom, date, slot))?.status || "available";
-  if (status === "closed") return "stopped";
+  if (hasSlotConflict(selectedFacility, selectedRoom, date, slot)) return "stopped";
+  const status = storedAvailabilityStatus(selectedFacility, selectedRoom, date, slot);
   return status === "confirmed" ? "reserved" : status;
 }
 function dateStatus(date) {
   if (closedDays.has(date)) return "closed";
   if (stoppedDays.has(date)) return "stopped";
   const states = slots.map((slot) => statusFor(date, slot.id));
-  if (states.some((status) => status !== "available")) return "pending";
+  if (states.some((status) => status === "pending" || status === "reserved")) return "pending";
+  if (states.some((status) => status === "stopped")) return "stopped";
   return "available";
 }
-function statusLabel(status) { return ({ available: "空き", pending: "受付中", reserved: "予約あり", closed: "休館日", stopped: "停止日" })[status] || "受付中"; }
+function statusLabel(status) { return ({ available: "空き", pending: "受付中", reserved: "予約あり", closed: "休館日", stopped: "停止" })[status] || "受付中"; }
 function renderCalendar() {
   calendar.replaceChildren();
   calendarMonth.textContent = `${displayedMonth.getFullYear()}年${displayedMonth.getMonth() + 1}月`;
@@ -175,11 +187,12 @@ form.addEventListener("submit", async (event) => {
   const availabilityRecord = { reservationId: recordId, slotId: id, facility, room, date, slot, status: "pending", createdAt };
   submitButton.disabled = true; setMessage(formStatus, "予約を送信しています…");
   try {
-    const [existingAvailability, closure, publicClosedDay, stoppedDay] = await Promise.all([
+    const [existingAvailability, closure, publicClosedDay, stoppedDay, ...relatedAvailability] = await Promise.all([
       getDoc(doc(db, "availability", id)),
       getDoc(doc(db, "closureAvailability", closureAvailabilityId(facility, date))),
       getDoc(closedDayRef(facility, date)),
       getDoc(stoppedDayRef(facility, room, date)),
+      ...conflictingSlots(slot).map((otherSlot) => getDoc(doc(db, "availability", reservationId(facility, room, date, otherSlot)))),
     ]);
     if (closure.exists() || publicClosedDay.exists()) {
       closedDays.add(date); renderCalendar(); renderSlots();
@@ -194,6 +207,13 @@ form.addEventListener("submit", async (event) => {
     if (existingAvailability.exists() && existingAvailability.data().status !== "available") {
       availability.set(id, existingAvailability.data()); renderCalendar(); renderSlots();
       setMessage(formStatus, "選択した館・施設・利用日・利用区分はすでに受付済みです。別の予約枠を選択してください。", "error");
+      return;
+    }
+    if (relatedAvailability.some((item) => item.exists() && item.data().status !== "available")) {
+      const conflictMessage = slot === "all_day"
+        ? "午前・午後・夜間に予約または停止枠があるため、全日は予約できません。"
+        : "全日予約または停止枠があるため、この利用区分は予約できません。";
+      setMessage(formStatus, conflictMessage, "error");
       return;
     }
     const batch = writeBatch(db);

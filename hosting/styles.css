@@ -47,13 +47,13 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .selected-date { color: #526a7d; font-weight: 800; margin: 0; }
 .slot-list { display: grid; gap: .9rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .slot-item { border: 1px solid #d5e0e6; border-left: .4rem solid #2477b8; border-radius: .7rem; display: grid; gap: .8rem; padding: 1rem; }
-.slot-item.is-pending { border-left-color: #718291; }
-.slot-item.is-reserved { border-left-color: #718291; }
+.slot-item.is-pending { border-left-color: #2477b8; }
+.slot-item.is-reserved { border-left-color: #2477b8; }
 .slot-item.is-stopped { border-left-color: #d97706; }
 .slot-item.is-closed { border-left-color: #c44b45; }
 .slot-item p { font-weight: 800; margin: 0; }
-.slot-item.is-pending p { color: #596978; }
-.slot-item.is-reserved p { color: #596978; }
+.slot-item.is-pending p { color: #1d5d91; }
+.slot-item.is-reserved p { color: #1d5d91; }
 .slot-item.is-stopped p { color: #b45309; }
 .slot-item.is-closed p { color: #ad2b2b; }
 .form-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -111,6 +111,8 @@ footer a { color: #596978; font-size: .9rem; }
 .reservation-status.status-confirmed { background: #dff1e7; color: #16613d; }
 .reservation-status.status-canceled { background: #eef1f3; color: #526a7d; }
 .reservation-item.is-pending { background: #fffdf1; border-left: .4rem solid #d69d00; }
+.reservation-item.is-canceled { background: #eef1f3; border-left: .4rem solid #9aa8b3; color: #526a7d; }
+.reservation-item.is-canceled .reservation-item-details { color: #718291; }
 .reservation-item.selected { background: #17324d; color: #fff; }
 .reservation-item.selected .reservation-item-details { color: #dce9f1; }
 .admin-actions { display: flex; flex-wrap: wrap; gap: .75rem; }

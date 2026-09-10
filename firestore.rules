@@ -181,6 +181,22 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/stopped_days/$(facility)/rooms/$(room)/dates/$(date));
     }
 
+    // A full-day reservation owns all three partial slots. Conversely, any
+    // active partial slot prevents a full-day reservation for that room/date.
+    function isAvailabilityAvailable(facility, room, date, slot) {
+      return !exists(/databases/$(database)/documents/availability/$(facility + "_" + room + "_" + date + "_" + slot)) ||
+             get(/databases/$(database)/documents/availability/$(facility + "_" + room + "_" + date + "_" + slot)).data.status == "available";
+    }
+
+    function hasNoCrossSlotConflict(facility, room, date, slot) {
+      return (slot == "all_day" &&
+              isAvailabilityAvailable(facility, room, date, "morning") &&
+              isAvailabilityAvailable(facility, room, date, "afternoon") &&
+              isAvailabilityAvailable(facility, room, date, "night")) ||
+             (slot in ["morning", "afternoon", "night"] &&
+              isAvailabilityAvailable(facility, room, date, "all_day"));
+    }
+
     // slotId identifies the bookable slot; reservationId identifies one entry in
     // its history stack. The availability document names the currently active one.
     match /reservations/{reservationId} {
@@ -190,6 +206,7 @@ service cloud.firestore {
         isValidReservation(reservationId) &&
         !isClosedDay(request.resource.data.facility, request.resource.data.date) &&
         !isStoppedDay(request.resource.data.facility, request.resource.data.room, request.resource.data.date) &&
+        hasNoCrossSlotConflict(request.resource.data.facility, request.resource.data.room, request.resource.data.date, request.resource.data.slot) &&
         getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.slotId == request.resource.data.slotId &&
         getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.reservationId == reservationId &&
         getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.status == "pending") ||
@@ -197,6 +214,7 @@ service cloud.firestore {
         isValidStaffReservation(reservationId) &&
         !isClosedDay(request.resource.data.facility, request.resource.data.date) &&
         !isStoppedDay(request.resource.data.facility, request.resource.data.room, request.resource.data.date) &&
+        hasNoCrossSlotConflict(request.resource.data.facility, request.resource.data.room, request.resource.data.date, request.resource.data.slot) &&
         getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.slotId == request.resource.data.slotId &&
         getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.reservationId == reservationId &&
         getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.status == "confirmed");
