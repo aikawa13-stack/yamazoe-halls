@@ -111,7 +111,7 @@ function refreshReservationActions(reservation, id) {
   revivalStatus.hidden = !canceled;
   revivalStatus.textContent = canceled ? (blocked ? "新しい予約があるため復活不可" : "この予約は復活できます。") : "";
   editStatus.disabled = canceled;
-  deleteReservationButton.hidden = accessFacility !== "all";
+  deleteReservationButton.hidden = false;
 }
 function reservationListSort(left, right) {
   const priority = { pending: 0, confirmed: 1, canceled: 2, closed: 3 };
@@ -715,7 +715,7 @@ reviveReservationButton.addEventListener("click", async () => {
 });
 
 deleteReservationButton.addEventListener("click", async () => {
-  if (accessFacility !== "all") { message(adminStatus, "予約を削除できるのは館長アカウントのみです。", "error"); return; }
+  if (accessFacility !== "all") { message(adminStatus, "削除の権限がありません（館長のみ可能です）。", "error"); return; }
   if (!selectedId || !window.confirm("この予約を削除しますか？")) return;
   try {
     const reservation = reservations.get(selectedId);
