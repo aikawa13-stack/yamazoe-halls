@@ -4,61 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260910-calendar-unified" />
-    <title>山添村公民館予約フォーム</title>
+    <meta http-equiv="refresh" content="0; url=/calendar" />
+    <title>山添村公民館予約</title>
   </head>
   <body>
-    <main class="page-shell">
-      <header class="intro" aria-labelledby="page-title">
-        <p class="eyebrow">公民館利用予約</p>
-        <h1 id="page-title">山添村公民館予約フォーム</h1>
-        <p class="lead">館内の施設（部屋）ごとの空き状況を確認し、利用予約をお申し込みいただけます。</p>
-      </header>
-
-      <section class="card availability-card" aria-labelledby="availability-title">
-        <div class="section-heading"><div><p class="eyebrow">AVAILABILITY</p><h2 id="availability-title">予約状況</h2></div></div>
-        <div class="room-selectors">
-          <label>館<select id="availability-facility"><option value="higashiyama" selected>東山</option><option value="hatano">波多野（文化伝習館）</option><option value="toyohara">豊原</option></select></label>
-          <label>施設（部屋）<select id="availability-room" required></select></label>
-        </div>
-        <div class="calendar-controls">
-          <button id="previous-month" class="secondary" type="button" aria-label="前の月">前月</button>
-          <h3 id="calendar-month"></h3>
-          <button id="next-month" class="secondary" type="button" aria-label="次の月">次月</button>
-        </div>
-        <div class="availability-legend" aria-label="空き状況の凡例"><span><i class="status-dot available"></i>空き</span><span><i class="status-dot pending"></i>予約あり</span><span><i class="status-dot stopped"></i>停止</span><span><i class="status-dot closed"></i>休館日</span></div>
-        <div id="calendar" class="calendar" role="grid" aria-labelledby="calendar-month"></div>
-        <p id="availability-status" role="status" aria-live="polite"></p>
-      </section>
-
-      <section id="daily-status" class="card slot-card" aria-labelledby="slot-title">
-        <div class="section-heading"><div><p class="eyebrow">DAILY AVAILABILITY</p><h2 id="slot-title">当日の予約状況</h2></div><p id="selected-date-label" class="selected-date"></p></div>
-        <p id="daily-status-notice" class="daily-status-notice" hidden>この日は休館日です。</p>
-        <div id="slot-list" class="slot-list" aria-live="polite"></div>
-      </section>
-
-      <section id="booking" class="card" aria-labelledby="form-title">
-        <p class="eyebrow">BOOKING</p><h2 id="form-title">予約内容を入力</h2>
-        <form id="reservation-form" novalidate>
-          <div class="form-grid">
-            <label>館<select id="facility" name="facility" required><option value="higashiyama" selected>東山</option><option value="hatano">波多野（文化伝習館）</option><option value="toyohara">豊原</option></select></label>
-            <label>施設（部屋）<select id="room" name="room" required></select></label>
-            <label>利用日<input id="date" name="date" type="date" required /></label>
-            <label>利用区分<select id="slot" name="slot" required><option value="" selected disabled>選択してください</option><option value="morning">午前（9:00–12:00）</option><option value="afternoon">午後（13:00–17:00）</option><option value="night">夜間（18:00–21:00）</option><option value="all_day">全日（9:00–21:00）</option></select></label>
-            <label>氏名<input id="customer-name" name="customerName" autocomplete="name" maxlength="80" required /></label>
-            <label>電話番号<input id="phone" name="phone" type="text" inputmode="numeric" autocomplete="tel" maxlength="30" required /><span id="phone-warning" class="field-warning" role="alert" hidden>電話番号は10桁以上で入力してください。</span></label>
-            <label class="full-width">利用目的<textarea id="purpose" name="purpose" maxlength="200" rows="3" required></textarea></label>
-            <label class="full-width">備考（任意）<textarea id="notes" name="notes" maxlength="500" rows="4"></textarea></label>
-          </div>
-          <button id="submit-button" type="submit">予約を送信</button>
-          <p id="form-status" role="status" aria-live="polite"></p>
-        </form>
-      </section>
-      <footer><a href="./admin.html">職員ログイン</a></footer>
-    </main>
-    <div id="public-operation-modal" class="public-operation-modal" aria-live="assertive" aria-atomic="true" hidden>
-      <div class="public-operation-modal__panel" role="alert"></div>
-    </div>
-    <script type="module" src="./app.js?v=20260910-calendar-unified"></script>
+    <p>カレンダー画面へ移動しています。<a href="/calendar">移動しない場合はこちら</a></p>
   </body>
 </html>

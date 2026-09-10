@@ -2,6 +2,7 @@
   "hosting": {
     "site": "yamazoe-halls-staging",
     "public": "hosting",
+    "cleanUrls": true,
     "ignore": [
       "firebase.json",
       "**/.*",
