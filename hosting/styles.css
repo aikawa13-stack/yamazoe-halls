@@ -32,14 +32,14 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .availability-legend span { align-items: center; display: inline-flex; font-size: .9rem; gap: .4rem; }
 .status-dot { background: #718291; border-radius: 50%; display: inline-block; height: .7rem; width: .7rem; }
 .status-dot.available, .is-available .day-marker { background: #2477b8; }
-.status-dot.pending, .is-pending .day-marker { background: #c44b45; }
+.status-dot.pending, .status-dot.confirmed, .is-pending .day-marker, .is-confirmed .day-marker { background: #c44b45; }
 .status-dot.stopped, .is-stopped .day-marker { background: #ca8a04; }
 .status-dot.closed, .is-closed .day-marker { background: #374151; }
 .calendar { display: grid; gap: .45rem; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .weekday { color: #596978; font-size: .82rem; font-weight: 800; padding: .25rem; text-align: center; }
 .calendar-day { background: #f7fafb; border: 1px solid #d5e0e6; color: #192738; display: grid; gap: .35rem; justify-items: center; min-height: 4.8rem; padding: .55rem .25rem; }
 .calendar-day:hover { background: #e7f2f8; }
-.calendar-day.is-pending { background: #fbeeee; }
+.calendar-day.is-pending, .calendar-day.is-confirmed { background: #fbeeee; }
 .calendar-day.is-stopped { background: #fef9c3; }
 .calendar-day.is-closed { background: #e5e7eb; }
 .calendar-day.selected { border: 3px solid #17324d; }
@@ -53,6 +53,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .daily-room-slots .slot-item { min-height: 9.25rem; }
 .daily-room-slots .slot-item h4 { color: #17324d; font-family: Georgia, "Yu Mincho", serif; font-size: 1rem; margin: 0; }
 .daily-status-notice { background: #e5e7eb; border-left: .35rem solid #374151; border-radius: .55rem; color: #1f2937; font-weight: 800; margin: 0 0 1rem; padding: .75rem 1rem; }
+.reservation-alert { background: #fbeeee; border-left: .35rem solid #c44b45; border-radius: .55rem; color: #9f2f2b; font-weight: 800; margin: 0 0 1rem; padding: .75rem 1rem; }
 .admin-daily-actions { display: flex; gap: .75rem; justify-content: end; margin-top: 1rem; }
 body[data-staff-page="daily"] .admin-daily-actions, body[data-staff-page="daily"] #calendar-link { display: none; }
 .confirmation { background: #f7fbfd; border: 1px solid #d5e0e6; border-radius: .8rem; margin-top: 1.25rem; padding: 1.25rem; }
@@ -70,13 +71,13 @@ body[data-staff-page="daily"] .admin-daily-actions, body[data-staff-page="daily"
 .page-back-fixed { box-shadow: 0 8px 22px rgba(23, 50, 77, .2); font-size: 1.03rem; left: 1.5rem; padding: .85rem 1.15rem; position: fixed; top: 1.5rem; z-index: 20; }
 body.has-fixed-back .page-shell { padding-top: 6rem; }
 .slot-item { border: 1px solid #d5e0e6; border-left: .4rem solid #2477b8; border-radius: .7rem; display: grid; gap: .8rem; padding: 1rem; }
-.slot-item.is-pending { border-left-color: #c44b45; }
+.slot-item.is-pending, .slot-item.is-confirmed { border-left-color: #c44b45; }
 .slot-item.is-reserved { border-left-color: #c44b45; }
 .slot-item.is-stopped { border-left-color: #ca8a04; }
 .slot-item.is-closed { border-left-color: #374151; }
 .slot-item.is-canceled { border-left-color: #9aa8b3; }
 .slot-item p { font-weight: 800; margin: 0; }
-.slot-item.is-pending p { color: #9f2f2b; }
+.slot-item.is-pending p, .slot-item.is-confirmed p { color: #9f2f2b; }
 .slot-item.is-reserved p { color: #9f2f2b; }
 .slot-item.is-stopped p { color: #854d0e; }
 .slot-item.is-closed p { color: #374151; }
