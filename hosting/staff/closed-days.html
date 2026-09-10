@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/styles.css?v=20260910-closed-days">
+  <title>休館日設定 | 山添村公民館</title>
+</head>
+<body data-staff-closed-days>
+  <main class="page-shell">
+    <header class="intro">
+      <p class="eyebrow">STAFF CLOSED DAYS</p>
+      <h1>休館日設定</h1>
+      <p id="staff-user" class="lead"></p>
+    </header>
+
+    <section id="login-panel" class="card">
+      <h2>職員ログイン</h2>
+      <form id="login-form" class="stack-form">
+        <label>メールアドレス<input id="login-email" type="email" required></label>
+        <label>パスワード<input id="login-password" type="password" required></label>
+        <button>ログイン</button>
+        <p id="login-status" role="status"></p>
+      </form>
+    </section>
+
+    <section id="closed-days-panel" hidden>
+      <section class="card">
+        <h2>対象の館・月</h2>
+        <div class="closed-days-page-controls">
+          <label>館<select id="facility"><option value="higashiyama">東山</option><option value="hatano">波多野（文化伝習館）</option><option value="toyohara">豊原</option></select></label>
+          <label>対象月<input id="month" type="month" required></label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>休館日登録</h2>
+        <p class="hint">テンプレートは館ごとの休館曜日と祝日を候補に追加します。内容を確認してから登録してください。</p>
+        <div class="closed-days-template-actions"><button id="apply-template" type="button">テンプレート適用</button><button id="save-closed-days" type="button" disabled>登録する</button></div>
+        <div class="closure-preview-heading"><h3>登録予定</h3><span id="preview-count">0件</span></div>
+        <div id="closed-preview" class="closed-day-preview"><p class="hint">テンプレート適用または個別追加で候補を表示します。</p></div>
+        <div class="closed-days-page-controls">
+          <label>個別に追加する日付<input id="individual-date" type="date"></label>
+          <div><button id="add-individual" type="button">一覧へ追加</button></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>休館日一覧</h2>
+        <p id="closed-list-status" class="hint">読み込み中です。</p>
+        <div id="closed-list" class="closed-days-page-list"></div>
+      </section>
+      <p id="page-status" role="status"></p>
+      <footer><button id="sign-out" class="link-button" type="button">ログアウト</button></footer>
+    </section>
+  </main>
+  <script type="module" src="/closed-days.js?v=20260910-closed-days"></script>
+</body>
+</html>

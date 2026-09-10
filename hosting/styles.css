@@ -15,6 +15,7 @@ h3 { font-size: 1.1rem; margin: 0; }
 .section-heading { align-items: end; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: 1.4rem; }
 .facility-picker { max-width: 13rem; min-width: 10rem; }
 .admin-calendar-tools { align-items: end; display: flex; flex-wrap: wrap; gap: .85rem; justify-content: end; }
+.calendar-page-actions { display: flex; justify-content: flex-end; margin: 0 0 1rem; }
 .admin-facility-control { font-size: .85rem; min-width: 12rem; }
 .admin-facility-control select { min-height: 2.7rem; }
 label { color: #31485e; display: grid; font-weight: 700; gap: .45rem; }
@@ -32,14 +33,14 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .status-dot { background: #718291; border-radius: 50%; display: inline-block; height: .7rem; width: .7rem; }
 .status-dot.available, .is-available .day-marker { background: #2477b8; }
 .status-dot.pending, .is-pending .day-marker { background: #c44b45; }
-.status-dot.stopped, .is-stopped .day-marker { background: #d97706; }
+.status-dot.stopped, .is-stopped .day-marker { background: #ca8a04; }
 .status-dot.closed, .is-closed .day-marker { background: #374151; }
 .calendar { display: grid; gap: .45rem; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .weekday { color: #596978; font-size: .82rem; font-weight: 800; padding: .25rem; text-align: center; }
 .calendar-day { background: #f7fafb; border: 1px solid #d5e0e6; color: #192738; display: grid; gap: .35rem; justify-items: center; min-height: 4.8rem; padding: .55rem .25rem; }
 .calendar-day:hover { background: #e7f2f8; }
 .calendar-day.is-pending { background: #fbeeee; }
-.calendar-day.is-stopped { background: #fff4e5; }
+.calendar-day.is-stopped { background: #fef9c3; }
 .calendar-day.is-closed { background: #e5e7eb; }
 .calendar-day.selected { border: 3px solid #17324d; }
 .day-marker { border-radius: 999px; color: #fff; font-size: .7rem; font-weight: 800; padding: .15rem .35rem; }
@@ -53,6 +54,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .daily-room-slots .slot-item h4 { color: #17324d; font-family: Georgia, "Yu Mincho", serif; font-size: 1rem; margin: 0; }
 .daily-status-notice { background: #e5e7eb; border-left: .35rem solid #374151; border-radius: .55rem; color: #1f2937; font-weight: 800; margin: 0 0 1rem; padding: .75rem 1rem; }
 .admin-daily-actions { display: flex; gap: .75rem; justify-content: end; margin-top: 1rem; }
+body[data-staff-page="daily"] .admin-daily-actions, body[data-staff-page="daily"] #calendar-link { display: none; }
 .confirmation { background: #f7fbfd; border: 1px solid #d5e0e6; border-radius: .8rem; margin-top: 1.25rem; padding: 1.25rem; }
 .confirmation dl { display: grid; gap: .5rem; grid-template-columns: max-content 1fr; line-height: 1.6; }
 .confirmation dt { color: #526a7d; font-weight: 800; }
@@ -65,16 +67,17 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .link-button:hover { background: transparent; color: #17324d; }
 .page-back { background: #526a7d; border-radius: .55rem; color: #fff; display: inline-block; font-weight: 800; min-height: 3rem; padding: .75rem 1rem; text-decoration: none; }
 .page-back:hover { background: #31485e; }
-.page-back-fixed { bottom: 1.25rem; box-shadow: 0 8px 22px rgba(23, 50, 77, .2); position: fixed; right: 1.25rem; z-index: 20; }
+.page-back-fixed { box-shadow: 0 8px 22px rgba(23, 50, 77, .2); font-size: 1.03rem; left: 1.5rem; padding: .85rem 1.15rem; position: fixed; top: 1.5rem; z-index: 20; }
+body.has-fixed-back .page-shell { padding-top: 6rem; }
 .slot-item { border: 1px solid #d5e0e6; border-left: .4rem solid #2477b8; border-radius: .7rem; display: grid; gap: .8rem; padding: 1rem; }
-.slot-item.is-pending { border-left-color: #2477b8; }
-.slot-item.is-reserved { border-left-color: #2477b8; }
-.slot-item.is-stopped { border-left-color: #d97706; }
+.slot-item.is-pending { border-left-color: #c44b45; }
+.slot-item.is-reserved { border-left-color: #c44b45; }
+.slot-item.is-stopped { border-left-color: #ca8a04; }
 .slot-item.is-closed { border-left-color: #374151; }
 .slot-item p { font-weight: 800; margin: 0; }
-.slot-item.is-pending p { color: #1d5d91; }
-.slot-item.is-reserved p { color: #1d5d91; }
-.slot-item.is-stopped p { color: #b45309; }
+.slot-item.is-pending p { color: #9f2f2b; }
+.slot-item.is-reserved p { color: #9f2f2b; }
+.slot-item.is-stopped p { color: #854d0e; }
 .slot-item.is-closed p { color: #374151; }
 .form-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .full-width { grid-column: 1 / -1; }
@@ -109,6 +112,11 @@ footer a { color: #596978; font-size: .9rem; }
 .closed-day-item:first-child { border-top: 0; padding-top: 0; }
 .closed-day-details { color: #31485e; font-size: .86rem; line-height: 1.55; }
 .closed-day-item button { min-height: 2.5rem; }
+.closed-days-page-controls { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.closed-days-page-controls .full-width { grid-column: 1 / -1; }
+.closed-days-template-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
+.closed-days-page-list { display: grid; gap: .65rem; margin: 1rem 0 0; }
+.closed-days-page-list .closed-day-item { background: #f7fbfd; border: 1px solid #d5e0e6; border-radius: .7rem; padding: .75rem; }
 .individual-closed-day-form { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); margin-top: 1rem; max-width: 36rem; }
 .closure-preview-heading { align-items: baseline; display: flex; justify-content: space-between; margin-top: 1.25rem; }
 .closure-preview-heading h4 { font-size: .95rem; margin: 0; }
@@ -127,9 +135,9 @@ footer a { color: #596978; font-size: .9rem; }
 .reservation-item { background: transparent; color: #192738; display: grid; gap: .3rem; padding: .9rem; text-align: left; width: 100%; }
 .reservation-item-details { align-items: center; color: #596978; display: flex; flex-wrap: wrap; font-size: .85rem; gap: .5rem; justify-content: space-between; }
 .reservation-status { border-radius: 999px; display: inline-block; font-size: .78rem; font-weight: 800; padding: .18rem .48rem; }
-.reservation-status.status-pending, .reservation-status.status-confirmed { background: #e7f2f8; color: #1d5d91; }
+.reservation-status.status-pending, .reservation-status.status-confirmed { background: #fbeeee; color: #9f2f2b; }
 .reservation-status.status-canceled { background: #eef1f3; color: #526a7d; }
-.reservation-item.is-pending { background: #edf6fb; border-left: .4rem solid #2477b8; }
+.reservation-item.is-pending { background: #fbeeee; border-left: .4rem solid #c44b45; }
 .reservation-item.is-canceled { background: #eef1f3; border-left: .4rem solid #9aa8b3; color: #526a7d; }
 .reservation-item.is-canceled .reservation-item-details { color: #718291; }
 .reservation-item.selected { background: #17324d; color: #fff; }
@@ -147,5 +155,5 @@ footer a { color: #596978; font-size: .9rem; }
 .public-operation-modal.is-visible .public-operation-modal__panel { opacity: 1; transform: scale(1) translateY(0); }
 @media (prefers-reduced-motion: reduce) { .admin-operation-modal, .admin-operation-modal__panel, .public-operation-modal, .public-operation-modal__panel { transition: none; } }
 @media (max-width: 1000px) { .closed-days-workspace { grid-template-columns: 1fr 1fr; } .closed-days-register-panel { grid-column: 1 / -1; } }
-@media (max-width: 800px) { .admin-layout, .slot-list, .closed-days-workspace, .daily-room-slots { grid-template-columns: 1fr; } .closed-days-register-panel { grid-column: auto; } .reservation-list-heading { align-items: stretch; flex-direction: column; } .admin-calendar-tools { align-items: stretch; justify-content: stretch; width: 100%; } .admin-facility-control { min-width: 0; width: 100%; } .template-controls button, .individual-closed-day-form button, #save-closed-days { justify-self: stretch; } }
-@media (max-width: 640px) { .page-shell { padding-top: 2.5rem; } .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: auto; } .section-heading { align-items: start; flex-direction: column; } .facility-picker { max-width: none; width: 100%; } .calendar { gap: .25rem; } .calendar-day { min-height: 4.1rem; padding: .4rem .15rem; } .day-marker { font-size: .62rem; padding: .1rem .2rem; } }
+@media (max-width: 800px) { .admin-layout, .slot-list, .closed-days-workspace, .daily-room-slots, .closed-days-page-controls { grid-template-columns: 1fr; } .closed-days-register-panel { grid-column: auto; } .reservation-list-heading { align-items: stretch; flex-direction: column; } .admin-calendar-tools { align-items: stretch; justify-content: stretch; width: 100%; } .admin-facility-control { min-width: 0; width: 100%; } .template-controls button, .individual-closed-day-form button, #save-closed-days { justify-self: stretch; } }
+@media (max-width: 640px) { .page-shell, body.has-fixed-back .page-shell { padding-top: 5.5rem; } .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: auto; } .section-heading { align-items: start; flex-direction: column; } .facility-picker { max-width: none; width: 100%; } .calendar { gap: .25rem; } .calendar-day { min-height: 4.1rem; padding: .4rem .15rem; } .day-marker { font-size: .62rem; padding: .1rem .2rem; } .page-back-fixed { left: 1rem; top: 1rem; } }

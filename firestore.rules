@@ -244,14 +244,14 @@ service cloud.firestore {
       // Staff-only data includes the member who registered the closure.
       allow read: if managesFacility(resource.data.facilityId);
       allow create: if managesFacility(request.resource.data.facilityId) && isValidClosedDay(closedDayId);
-      allow delete: if managesFacility(resource.data.facilityId);
+      allow delete: if isManager();
     }
 
     match /closureAvailability/{closureId} {
       // Public calendar data deliberately excludes staff email and audit fields.
       allow read: if true;
       allow create: if managesFacility(request.resource.data.facilityId) && isValidClosureAvailability(closureId);
-      allow delete: if managesFacility(resource.data.facilityId);
+      allow delete: if isManager();
     }
 
     // Public calendar projections. The nested date collections preserve the
@@ -261,7 +261,7 @@ service cloud.firestore {
       allow create, update: if managesFacility(facilityId) &&
         request.resource.data.keys().hasOnly(["facilityId", "date"]) &&
         request.resource.data.facilityId == facilityId && request.resource.data.date == date;
-      allow delete: if managesFacility(facilityId);
+      allow delete: if isManager();
     }
 
     match /stopped_days/{facilityId}/rooms/{roomId}/dates/{date} {

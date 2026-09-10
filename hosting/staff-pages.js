@@ -53,7 +53,7 @@ function startDaily() {
 function showLogin(user, claims) { const login = document.querySelector("#login-panel"); const panel = document.querySelector("#staff-panel"); if (!user) { login.hidden = false; panel.hidden = true; return; } if (!claims.admin || !claims.facility) { document.querySelector("#login-status").textContent = "職員権限を確認できません。再ログインしてください。"; return; } accessFacility = claims.facility; staffEmail = user.email; login.hidden = true; panel.hidden = false; const userText = document.querySelector("#staff-user"); if (userText) userText.textContent = `${user.email} としてログイン中`; if (page === "calendar") startCalendar(); else startDaily(); }
 document.querySelector("#login-form").addEventListener("submit", async (event) => { event.preventDefault(); try { await signInWithEmailAndPassword(auth, document.querySelector("#login-email").value, document.querySelector("#login-password").value); } catch { document.querySelector("#login-status").textContent = "メールアドレスまたはパスワードを確認してください。"; } });
 document.querySelector("#sign-out")?.addEventListener("click", () => signOut(auth));
-document.querySelectorAll('a[href="/admin.html"]').forEach((link) => { link.href = "/admin.html?manage=1"; });
+document.querySelectorAll('a[href="/admin.html"]').forEach((link) => { link.href = "/staff/calendar"; });
 document.addEventListener("click", async (event) => {
   if (page !== "daily") return;
   const item = event.target.closest(".slot-item"); if (!item) return;
@@ -72,6 +72,14 @@ document.addEventListener("click", async (event) => {
 });
 if (page === "daily") {
   const facility = params.get("facility") || "higashiyama"; const date = params.get("date") || localDate(new Date());
-  const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = `/staff/calendar?facility=${encodeURIComponent(facility)}&month=${date.slice(0, 7)}`; back.textContent = "戻る"; document.body.append(back);
+  document.body.classList.add("has-fixed-back");
+  const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = `/staff/calendar?facility=${encodeURIComponent(facility)}&month=${date.slice(0, 7)}`; back.textContent = "← 戻る（カレンダーへ）"; document.body.append(back);
+}
+if (page === "calendar") {
+  const calendar = document.querySelector("#calendar"); const facilitySelect = document.querySelector("#facility"); const monthHeading = document.querySelector("#calendar-month");
+  const actions = document.createElement("div"); actions.className = "calendar-page-actions"; const closedDays = document.createElement("a"); closedDays.className = "page-back"; closedDays.textContent = "休館日設定"; actions.append(closedDays); calendar.parentElement.insertBefore(actions, calendar);
+  const syncClosedDaysLink = () => { const facility = facilitySelect.value || "higashiyama"; const month = monthHeading.textContent.match(/(\d{4})年(\d+)月/); const value = month ? `${month[1]}-${String(month[2]).padStart(2, "0")}` : localDate(new Date()).slice(0, 7); closedDays.href = `/staff/closed-days?facility=${encodeURIComponent(facility)}&month=${value}`; };
+  facilitySelect.addEventListener("change", () => setTimeout(syncClosedDaysLink)); document.querySelector("#previous-month").addEventListener("click", () => setTimeout(syncClosedDaysLink)); document.querySelector("#next-month").addEventListener("click", () => setTimeout(syncClosedDaysLink)); setTimeout(syncClosedDaysLink);
+  document.body.classList.add("has-fixed-back"); const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = "/"; back.textContent = "← 戻る（予約トップへ）"; document.body.append(back);
 }
 onAuthStateChanged(auth, async (user) => showLogin(user, user ? (await getIdTokenResult(user, true)).claims : {}));

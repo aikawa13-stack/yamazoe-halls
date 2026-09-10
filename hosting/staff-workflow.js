@@ -10,7 +10,7 @@ function reservationId(facility, room, date, slot) { return `${facility}_${room}
 function conflicts(slot) { return slot === "all_day" ? partialSlots : partialSlots.includes(slot) ? ["all_day"] : []; }
 function message(text, type = "") { const target = document.querySelector("#page-status"); if (target) { target.textContent = text; target.className = type; } }
 function dailyUrl(facility, date) { return `/staff/daily?facility=${encodeURIComponent(facility)}&date=${encodeURIComponent(date)}`; }
-function backLink(facility, date) { const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = dailyUrl(facility, date); back.textContent = "戻る"; document.body.append(back); }
+function backLink(facility, date) { document.body.classList.add("has-fixed-back"); const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = dailyUrl(facility, date); back.textContent = "← 戻る（日付別画面へ）"; document.body.append(back); }
 function validStaffScope(facility) { return claims.facility === "all" || claims.facility === facility; }
 
 function startReserve() {

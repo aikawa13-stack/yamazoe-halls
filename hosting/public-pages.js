@@ -125,6 +125,8 @@ const returnTargets = {
   reserve: `/daily?facility=${encodeURIComponent(params.get("facility") || "higashiyama")}&date=${encodeURIComponent(params.get("date") || today)}`,
 };
 if (returnTargets[page]) {
-  const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = returnTargets[page]; back.textContent = "戻る";
+  const labels = { calendar: "← 戻る（予約トップへ）", daily: "← 戻る（カレンダーへ）", reserve: "← 戻る（日付別画面へ）" };
+  document.body.classList.add("has-fixed-back");
+  const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = returnTargets[page]; back.textContent = labels[page];
   document.body.append(back);
 }
