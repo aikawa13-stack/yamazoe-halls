@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260910-reservation-stack" />
+    <link rel="stylesheet" href="./styles.css?v=20260910-calendar-unified" />
     <title>Yamazoe Halls | 職員管理</title>
   </head>
   <body>
@@ -47,15 +47,21 @@
                 </select>
               </label>
               <div class="month-controls">
-                <button id="previous-admin-month" class="secondary" type="button" aria-label="前月">←</button>
+                <button id="previous-admin-month" class="secondary" type="button" aria-label="前月">前月</button>
                 <strong id="admin-calendar-month"></strong>
-                <button id="next-admin-month" class="secondary" type="button" aria-label="次月">→</button>
+                <button id="next-admin-month" class="secondary" type="button" aria-label="次月">次月</button>
               </div>
             </div>
           </div>
           <p class="calendar-legend"><span class="status-dot available"></span>開館日 <span class="status-dot pending"></span>予約あり <span class="status-dot stopped"></span>停止 <span class="status-dot closed"></span>休館日</p>
-          <p class="hint">日付を選択すると、開館日は休館日に設定し、休館日は例外開館として削除できます。予約ありは館内のいずれかの部屋に予約がある日です。</p>
+          <p class="hint">日付を選択すると、当日の会議室別の予約状況と休館操作を表示します。</p>
           <div id="admin-calendar" class="calendar" aria-label="職員用予約・休館日カレンダー"></div>
+        </section>
+        <section id="admin-daily-status" class="card slot-card" aria-labelledby="admin-daily-title">
+          <div class="section-heading"><div><p class="eyebrow">DAILY AVAILABILITY</p><h2 id="admin-daily-title">当日の予約状況</h2></div><p id="admin-daily-date" class="selected-date"></p></div>
+          <p id="admin-daily-notice" class="daily-status-notice" hidden>この日は休館日です。</p>
+          <div id="admin-daily-list" class="slot-list" aria-live="polite"></div>
+          <div class="admin-daily-actions"><button id="set-closed-day" type="button">休館登録</button><button id="clear-closed-day" class="secondary" type="button">休館取消</button></div>
         </section>
         <section class="card closed-days-card" aria-labelledby="closed-days-title">
           <h2 id="closed-days-title">休館日管理</h2>
@@ -168,6 +174,6 @@
     <div id="admin-operation-modal" class="admin-operation-modal" aria-live="polite" aria-atomic="true" hidden>
       <div class="admin-operation-modal__panel" role="status"></div>
     </div>
-    <script type="module" src="./admin.js?v=20260910-reservation-stack"></script>
+    <script type="module" src="./admin.js?v=20260910-calendar-unified"></script>
   </body>
 </html>

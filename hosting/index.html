@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17324d" />
-    <link rel="stylesheet" href="./styles.css?v=20260910-reservation-stack" />
+    <link rel="stylesheet" href="./styles.css?v=20260910-calendar-unified" />
     <title>山添村公民館予約フォーム</title>
   </head>
   <body>
@@ -26,13 +26,14 @@
           <h3 id="calendar-month"></h3>
           <button id="next-month" class="secondary" type="button" aria-label="次の月">次月</button>
         </div>
-        <div class="availability-legend" aria-label="空き状況の凡例"><span><i class="status-dot available"></i>空き</span><span><i class="status-dot pending"></i>受付中</span><span><i class="status-dot stopped"></i>停止</span><span><i class="status-dot closed"></i>休館日</span></div>
+        <div class="availability-legend" aria-label="空き状況の凡例"><span><i class="status-dot available"></i>空き</span><span><i class="status-dot pending"></i>予約あり</span><span><i class="status-dot stopped"></i>停止</span><span><i class="status-dot closed"></i>休館日</span></div>
         <div id="calendar" class="calendar" role="grid" aria-labelledby="calendar-month"></div>
         <p id="availability-status" role="status" aria-live="polite"></p>
       </section>
 
-      <section class="card slot-card" aria-labelledby="slot-title">
-        <div class="section-heading"><div><p class="eyebrow">SELECT A SLOT</p><h2 id="slot-title">利用区分を選択</h2></div><p id="selected-date-label" class="selected-date"></p></div>
+      <section id="daily-status" class="card slot-card" aria-labelledby="slot-title">
+        <div class="section-heading"><div><p class="eyebrow">DAILY AVAILABILITY</p><h2 id="slot-title">当日の予約状況</h2></div><p id="selected-date-label" class="selected-date"></p></div>
+        <p id="daily-status-notice" class="daily-status-notice" hidden>この日は休館日です。</p>
         <div id="slot-list" class="slot-list" aria-live="polite"></div>
       </section>
 
@@ -58,6 +59,6 @@
     <div id="public-operation-modal" class="public-operation-modal" aria-live="assertive" aria-atomic="true" hidden>
       <div class="public-operation-modal__panel" role="alert"></div>
     </div>
-    <script type="module" src="./app.js?v=20260910-reservation-stack"></script>
+    <script type="module" src="./app.js?v=20260910-calendar-unified"></script>
   </body>
 </html>

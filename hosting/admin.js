@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, getIdTokenResult, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 import { collection, doc, getDoc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-import { facilityLabel, roomLabel, roomsFor, slotLabel } from "./config.js";
+import { facilityLabel, roomLabel, roomsFor, slotLabel, slots } from "./config.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB4RYPAvnwets8LI6Vefnuxc_eC7ftymig",
@@ -45,6 +45,12 @@ const saveClosedDays = document.querySelector("#save-closed-days");
 const adminFacility = document.querySelector("#admin-facility");
 const adminCalendar = document.querySelector("#admin-calendar");
 const adminCalendarMonth = document.querySelector("#admin-calendar-month");
+const adminDailyStatus = document.querySelector("#admin-daily-status");
+const adminDailyDate = document.querySelector("#admin-daily-date");
+const adminDailyNotice = document.querySelector("#admin-daily-notice");
+const adminDailyList = document.querySelector("#admin-daily-list");
+const setClosedDayButton = document.querySelector("#set-closed-day");
+const clearClosedDayButton = document.querySelector("#clear-closed-day");
 const staffReservationPanel = document.querySelector("#staff-reservation-panel");
 const staffReservationForm = document.querySelector("#staff-reservation-form");
 const staffReservationStatus = document.querySelector("#staff-reservation-status");
@@ -60,10 +66,14 @@ let reservations = new Map();
 let stopListening = null;
 let stopClosedDays = null;
 let stopAdminAvailability = null;
+let stopAdminStoppedDays = [];
 let accessFacility = null;
 let configuredClosedDays = new Map();
 let closurePreview = new Map();
 let adminAvailability = new Map();
+let adminStoppedDays = new Set();
+let adminStoppedDaysByRoom = new Map();
+let selectedAdminDate = null;
 let operationModalTimer = null;
 let operationModalHideTimer = null;
 const facilities = ["higashiyama", "hatano", "toyohara"];
@@ -274,6 +284,7 @@ function closureId(facilityId, date) { return `${facilityId}_${date.replaceAll("
 function publicClosureId(facilityId, date) { return `${facilityId}_${date}`; }
 function publicClosedDayRef(facilityId, date) { return doc(db, "closed_days", facilityId, "dates", date); }
 function stoppedDayRef(facilityId, room, date) { return doc(db, "stopped_days", facilityId, "rooms", room, "dates", date); }
+function stoppedDayKey(room, date) { return `${room}_${date}`; }
 
 function monthBounds(month) {
   const [year, monthNumber] = month.split("-").map(Number);
@@ -352,9 +363,57 @@ function formatTimestamp(value) {
   return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short" }).format(value.toDate());
 }
 
+function adminAvailabilityStatus(facility, room, date, slot) {
+  const status = adminAvailability.get(reservationId(facility, room, date, slot))?.status || "available";
+  return status === "closed" ? "stopped" : status;
+}
+
+function adminSlotStatus(room, date, slot) {
+  if (configuredClosedDays.has(closureId(closedDaysFacility.value, date))) return "closed";
+  if (adminStoppedDays.has(stoppedDayKey(room, date))) return "stopped";
+  if (conflictingSlots(slot).some((otherSlot) => adminAvailabilityStatus(closedDaysFacility.value, room, date, otherSlot) !== "available")) return "stopped";
+  const status = adminAvailabilityStatus(closedDaysFacility.value, room, date, slot);
+  return status === "confirmed" ? "reserved" : status;
+}
+
 function adminDateStatus(date) {
   if (configuredClosedDays.has(closureId(closedDaysFacility.value, date))) return "closed";
-  return [...adminAvailability.values()].some((record) => record.date === date && record.status !== "available") ? "pending" : "available";
+  const states = roomsFor(closedDaysFacility.value).flatMap((room) => slots.map((slot) => adminSlotStatus(room.id, date, slot.id)));
+  if (states.some((status) => status === "pending" || status === "reserved")) return "pending";
+  if (states.some((status) => status === "stopped")) return "stopped";
+  return "available";
+}
+function calendarStatusLabel(status) {
+  return ({ available: "空き", pending: "予約あり", reserved: "予約あり", canceled: "キャンセル済", stopped: "停止", closed: "休館日" })[status] || status;
+}
+function selectAdminDate(date) {
+  selectedAdminDate = date;
+  renderAdminCalendar();
+  renderAdminDailyStatus();
+  adminDailyStatus.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function renderAdminDailyStatus() {
+  if (!selectedAdminDate) return;
+  const facility = closedDaysFacility.value;
+  const closed = configuredClosedDays.has(closureId(facility, selectedAdminDate));
+  adminDailyDate.textContent = `${facilityLabel(facility)} · ${selectedAdminDate}`;
+  adminDailyNotice.hidden = !closed;
+  setClosedDayButton.hidden = closed;
+  clearClosedDayButton.hidden = !closed;
+  adminDailyList.replaceChildren();
+  for (const room of roomsFor(facility)) {
+    const roomSection = document.createElement("section"); roomSection.className = "daily-room";
+    const heading = document.createElement("h3"); heading.textContent = room.label; roomSection.append(heading);
+    const roomSlots = document.createElement("div"); roomSlots.className = "daily-room-slots";
+    for (const slot of slots) {
+      const status = adminSlotStatus(room.id, selectedAdminDate, slot.id);
+      const item = document.createElement("article"); item.className = `slot-item is-${status}`;
+      const title = document.createElement("h4"); title.textContent = `${slot.label}（${slot.hours}）`;
+      const state = document.createElement("p"); state.textContent = calendarStatusLabel(status);
+      item.append(title, state); roomSlots.append(item);
+    }
+    roomSection.append(roomSlots); adminDailyList.append(roomSection);
+  }
 }
 
 async function deleteClosedDay(day) {
@@ -400,27 +459,12 @@ function renderAdminCalendar() {
     const date = localDate(new Date(year, monthNumber - 1, day));
     const status = adminDateStatus(date);
     const button = document.createElement("button");
-    button.type = "button"; button.className = `calendar-day is-${status}`;
-    button.setAttribute("aria-label", `${date}、${status === "closed" ? "休館日" : status === "pending" ? "予約あり" : "開館日"}`);
+    button.type = "button"; button.className = `calendar-day is-${status}${date === selectedAdminDate ? " selected" : ""}`;
+    button.setAttribute("aria-label", `${date}、${calendarStatusLabel(status)}`);
     const dayNumber = document.createElement("strong"); dayNumber.textContent = String(day);
-    const marker = document.createElement("span"); marker.className = "day-marker"; marker.textContent = status === "closed" ? "休館日" : status === "pending" ? "予約あり" : "開館日";
+    const marker = document.createElement("span"); marker.className = "day-marker"; marker.textContent = calendarStatusLabel(status);
     button.append(dayNumber, marker);
-    button.addEventListener("click", async () => {
-      const facilityId = closedDaysFacility.value;
-      if (status === "closed") {
-        if (!window.confirm(`${date} を休館日から削除し、開館扱いにしますか？`)) return;
-        try {
-          await deleteClosedDay(configuredClosedDays.get(closureId(facilityId, date)));
-          message(closedDayStatus, "休館日を削除し、開館扱いとしました。", "success");
-        } catch { message(closedDayStatus, "休館日を削除できません。職員権限を確認してください。", "error"); }
-      } else {
-        if (!window.confirm(`${date} を休館日に設定しますか？`)) return;
-        try {
-          await addClosedDay(facilityId, date);
-          message(closedDayStatus, "休館日として登録しました。", "success");
-        } catch { message(closedDayStatus, "休館日を設定できません。職員権限を確認してください。", "error"); }
-      }
-    });
+    button.addEventListener("click", () => selectAdminDate(date));
     adminCalendar.append(button);
   }
 }
@@ -463,18 +507,23 @@ function renderClosedDays(days) {
 }
 
 function startClosedDays() {
-  stopClosedDays?.(); stopAdminAvailability?.();
+  stopClosedDays?.(); stopAdminAvailability?.(); stopAdminStoppedDays.forEach((stop) => stop());
   renderClosedDaysMonthLabel();
   const facilityId = closedDaysFacility.value;
   const [start, end] = monthBounds(closedDaysMonth.value);
   configuredClosedDays = new Map();
   adminAvailability = new Map();
+  adminStoppedDays = new Set();
+  adminStoppedDaysByRoom = new Map();
+  if (!selectedAdminDate || selectedAdminDate < start || selectedAdminDate > end) selectedAdminDate = start;
   renderAdminCalendar();
+  renderAdminDailyStatus();
   const closedDaysQuery = query(collection(db, "closedDays"), where("facilityId", "==", facilityId), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
   stopClosedDays = onSnapshot(closedDaysQuery, (snapshot) => {
     configuredClosedDays = new Map(snapshot.docs.map((item) => [item.id, item]));
     renderClosedDays(snapshot.docs);
     renderAdminCalendar();
+    renderAdminDailyStatus();
   }, () => {
     message(closedDayStatus, "休館日一覧を取得できません。職員権限を確認してください。", "error");
   });
@@ -482,7 +531,17 @@ function startClosedDays() {
   stopAdminAvailability = onSnapshot(availabilityQuery, (snapshot) => {
     adminAvailability = new Map(snapshot.docs.map((item) => [item.id, item.data()]));
     renderAdminCalendar();
+    renderAdminDailyStatus();
   }, () => message(adminStatus, "カレンダーの予約状況を取得できません。", "error"));
+  stopAdminStoppedDays = roomsFor(facilityId).map((room) => {
+    const stoppedQuery = query(collection(db, "stopped_days", facilityId, "rooms", room.id, "dates"), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
+    return onSnapshot(stoppedQuery, (snapshot) => {
+      adminStoppedDaysByRoom.set(room.id, new Set(snapshot.docs.map((item) => stoppedDayKey(room.id, item.data().date))));
+      adminStoppedDays = new Set([...adminStoppedDaysByRoom.values()].flatMap((days) => [...days]));
+      renderAdminCalendar();
+      renderAdminDailyStatus();
+    }, () => message(adminStatus, "カレンダーの停止情報を取得できません。", "error"));
+  });
 }
 
 function changeAdminFacility(facility) {
@@ -752,6 +811,27 @@ deleteReservationButton.addEventListener("click", async () => {
     message(adminStatus, "予約を削除しました。", "success");
   }
   catch { message(adminStatus, "削除できません。職員権限を確認してください。", "error"); }
+});
+
+setClosedDayButton.addEventListener("click", async () => {
+  if (!selectedAdminDate) return;
+  const facilityId = closedDaysFacility.value;
+  if (!window.confirm(`${selectedAdminDate} を休館日に設定しますか？`)) return;
+  try {
+    await addClosedDay(facilityId, selectedAdminDate);
+    message(closedDayStatus, "休館日として登録しました。", "success");
+  } catch { message(closedDayStatus, "休館日を設定できません。職員権限を確認してください。", "error"); }
+});
+
+clearClosedDayButton.addEventListener("click", async () => {
+  if (!selectedAdminDate) return;
+  const facilityId = closedDaysFacility.value;
+  const closedDay = configuredClosedDays.get(closureId(facilityId, selectedAdminDate));
+  if (!closedDay || !window.confirm(`${selectedAdminDate} を休館日から削除し、開館扱いにしますか？`)) return;
+  try {
+    await deleteClosedDay(closedDay);
+    message(closedDayStatus, "休館日を削除し、開館扱いとしました。", "success");
+  } catch { message(closedDayStatus, "休館日を削除できません。職員権限を確認してください。", "error"); }
 });
 
 document.querySelector("#sign-out").addEventListener("click", () => signOut(auth));

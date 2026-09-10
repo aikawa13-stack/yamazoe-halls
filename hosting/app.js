@@ -30,10 +30,11 @@ let availability = new Map();
 let closedDays = new Set();
 let legacyClosedDays = new Set();
 let stoppedDays = new Set();
+let stoppedDaysByRoom = new Map();
 let stopAvailability = null;
 let stopClosedDays = null;
 let stopLegacyClosedDays = null;
-let stopStoppedDays = null;
+let stopStoppedDays = [];
 let publicOperationModalTimer = null;
 let publicOperationModalHideTimer = null;
 displayedMonth.setDate(1);
@@ -60,6 +61,7 @@ function hasSlotConflict(facility, room, date, slot) {
 function closureAvailabilityId(facility, date) { return `${facility}_${date}`; }
 function closedDayRef(facility, date) { return doc(db, "closed_days", facility, "dates", date); }
 function stoppedDayRef(facility, room, date) { return doc(db, "stopped_days", facility, "rooms", room, "dates", date); }
+function stoppedDayKey(room, date) { return `${room}_${date}`; }
 function refreshClosedDays() { closedDays = new Set([...legacyClosedDays, ...closedDays]); }
 function setMessage(target, message, type = "") { target.textContent = message; target.className = type; }
 function validatePhone() {
@@ -95,22 +97,24 @@ function setFacility(facility, room = "") {
   listenCalendarData();
 }
 function monthBounds() { const start = localDate(displayedMonth); const end = new Date(displayedMonth); end.setMonth(end.getMonth() + 1); end.setDate(0); return [start, localDate(end)]; }
-function statusFor(date, slot) {
+function statusForRoom(room, date, slot) {
   if (closedDays.has(date)) return "closed";
-  if (stoppedDays.has(date)) return "stopped";
-  if (hasSlotConflict(selectedFacility, selectedRoom, date, slot)) return "stopped";
-  const status = storedAvailabilityStatus(selectedFacility, selectedRoom, date, slot);
+  if (stoppedDays.has(stoppedDayKey(room, date))) return "stopped";
+  if (hasSlotConflict(selectedFacility, room, date, slot)) return "stopped";
+  const status = storedAvailabilityStatus(selectedFacility, room, date, slot);
   return status === "confirmed" ? "reserved" : status;
 }
+function statusFor(date, slot) { return statusForRoom(selectedRoom, date, slot); }
 function dateStatus(date) {
   if (closedDays.has(date)) return "closed";
-  if (stoppedDays.has(date)) return "stopped";
+  if (stoppedDays.has(stoppedDayKey(selectedRoom, date))) return "stopped";
   const states = slots.map((slot) => statusFor(date, slot.id));
   if (states.some((status) => status === "pending" || status === "reserved")) return "pending";
   if (states.some((status) => status === "stopped")) return "stopped";
   return "available";
 }
-function statusLabel(status) { return ({ available: "空き", pending: "受付中", reserved: "予約あり", closed: "休館日", stopped: "停止" })[status] || "受付中"; }
+function statusLabel(status) { return ({ available: "空き", pending: "予約あり", reserved: "予約あり", closed: "休館日", stopped: "停止" })[status] || "予約あり"; }
+function dailyStatusLabel(status) { return ({ available: "空き", pending: "受付中", reserved: "確定", closed: "休館日", stopped: "停止" })[status] || statusLabel(status); }
 function renderCalendar() {
   calendar.replaceChildren();
   calendarMonth.textContent = `${displayedMonth.getFullYear()}年${displayedMonth.getMonth() + 1}月`;
@@ -126,10 +130,13 @@ function renderCalendar() {
     const button = document.createElement("button"); button.type = "button"; button.className = `calendar-day is-${status}${date === selectedDate ? " selected" : ""}`; button.disabled = date < today; button.setAttribute("aria-label", `${date}、${statusLabel(status)}`);
     const dayNumber = document.createElement("strong"); dayNumber.textContent = String(day);
     const marker = document.createElement("span"); marker.className = "day-marker"; marker.textContent = statusLabel(status);
-    button.append(dayNumber, marker); button.addEventListener("click", () => selectDate(date)); calendar.append(button);
+    button.append(dayNumber, marker); button.addEventListener("click", () => selectDate(date, true)); calendar.append(button);
   }
 }
-function selectDate(date) { selectedDate = date; dateInput.value = date; renderCalendar(); renderSlots(); }
+function selectDate(date, showDailyStatus = false) {
+  selectedDate = date; dateInput.value = date; renderCalendar(); renderSlots();
+  if (showDailyStatus) document.querySelector("#daily-status").scrollIntoView({ behavior: "smooth", block: "start" });
+}
 function selectMonth(offset) {
   const nextMonth = new Date(displayedMonth); nextMonth.setMonth(nextMonth.getMonth() + offset);
   const currentMonth = new Date(); currentMonth.setDate(1); currentMonth.setHours(0, 0, 0, 0);
@@ -137,34 +144,52 @@ function selectMonth(offset) {
   displayedMonth = nextMonth; selectedDate = localDate(displayedMonth); dateInput.value = selectedDate; listenCalendarData();
 }
 function renderSlots() {
-  selectedDateLabel.textContent = `${facilityLabel(selectedFacility)} · ${roomLabel(selectedFacility, selectedRoom)} · ${selectedDate}`;
+  selectedDateLabel.textContent = `${facilityLabel(selectedFacility)} · ${selectedDate}`;
   slotList.replaceChildren();
-  for (const slot of slots) {
-    const status = statusFor(selectedDate, slot.id);
-    const item = document.createElement("article"); item.className = `slot-item is-${status}`;
-    const title = document.createElement("h3"); title.textContent = `${slot.label}（${slot.hours}）`;
-    const state = document.createElement("p"); state.textContent = statusLabel(status); item.append(title, state);
-    if (status === "available") {
-      const button = document.createElement("button"); button.type = "button"; button.textContent = "この区分を予約する";
-      button.addEventListener("click", () => { formFacility.value = selectedFacility; formRoom.value = selectedRoom; dateInput.value = selectedDate; formSlot.value = slot.id; document.querySelector("#booking").scrollIntoView({ behavior: "smooth", block: "start" }); formSlot.focus(); });
-      item.append(button);
+  const notice = document.querySelector("#daily-status-notice");
+  notice.hidden = !closedDays.has(selectedDate);
+  for (const room of roomsFor(selectedFacility)) {
+    const roomSection = document.createElement("section"); roomSection.className = "daily-room";
+    const heading = document.createElement("h3"); heading.textContent = room.label; roomSection.append(heading);
+    const roomSlots = document.createElement("div"); roomSlots.className = "daily-room-slots";
+    for (const slot of slots) {
+      const status = statusForRoom(room.id, selectedDate, slot.id);
+      const item = document.createElement("article"); item.className = `slot-item is-${status}`;
+      const title = document.createElement("h4"); title.textContent = `${slot.label}（${slot.hours}）`;
+      const state = document.createElement("p"); state.textContent = dailyStatusLabel(status); item.append(title, state);
+      if (status === "available") {
+        const button = document.createElement("button"); button.type = "button"; button.textContent = "予約する";
+        button.addEventListener("click", () => {
+          selectedRoom = room.id; availabilityRoom.value = room.id; formFacility.value = selectedFacility; formRoom.value = room.id;
+          dateInput.value = selectedDate; formSlot.value = slot.id;
+          document.querySelector("#booking").scrollIntoView({ behavior: "smooth", block: "start" }); formSlot.focus();
+        });
+        item.append(button);
+      }
+      roomSlots.append(item);
     }
-    slotList.append(item);
+    roomSection.append(roomSlots); slotList.append(roomSection);
   }
 }
 function listenCalendarData() {
-  stopAvailability?.(); stopClosedDays?.(); stopLegacyClosedDays?.(); stopStoppedDays?.();
-  const [start, end] = monthBounds(); availability = new Map(); closedDays = new Set(); legacyClosedDays = new Set(); stoppedDays = new Set();
+  stopAvailability?.(); stopClosedDays?.(); stopLegacyClosedDays?.(); stopStoppedDays.forEach((stop) => stop());
+  const [start, end] = monthBounds(); availability = new Map(); closedDays = new Set(); legacyClosedDays = new Set(); stoppedDays = new Set(); stoppedDaysByRoom = new Map();
   setMessage(availabilityStatus, "空き状況を読み込んでいます…");
-  const availabilityQuery = query(collection(db, "availability"), where("facility", "==", selectedFacility), where("room", "==", selectedRoom), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
-  const successMessage = "青は空き、灰色は受付中、オレンジは停止日、赤は休館日です。";
+  const availabilityQuery = query(collection(db, "availability"), where("facility", "==", selectedFacility), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
+  const successMessage = "青は空き、赤は予約あり、オレンジは停止、濃灰は休館日です。";
   stopAvailability = onSnapshot(availabilityQuery, (snapshot) => { availability = new Map(snapshot.docs.map((item) => [item.id, item.data()])); renderCalendar(); renderSlots(); setMessage(availabilityStatus, successMessage, "success"); }, () => setMessage(availabilityStatus, "予約状況を取得できません。しばらくしてからお試しください。", "error"));
   const closedQuery = query(collection(db, "closed_days", selectedFacility, "dates"), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
   stopClosedDays = onSnapshot(closedQuery, (snapshot) => { closedDays = new Set(snapshot.docs.map((item) => item.data().date)); refreshClosedDays(); renderCalendar(); renderSlots(); setMessage(availabilityStatus, successMessage, "success"); }, () => setMessage(availabilityStatus, "休館日情報を取得できません。しばらくしてからお試しください。", "error"));
   const legacyClosedQuery = query(collection(db, "closureAvailability"), where("facilityId", "==", selectedFacility), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
   stopLegacyClosedDays = onSnapshot(legacyClosedQuery, (snapshot) => { legacyClosedDays = new Set(snapshot.docs.map((item) => item.data().date)); refreshClosedDays(); renderCalendar(); renderSlots(); }, () => setMessage(availabilityStatus, "休館日情報を取得できません。しばらくしてからお試しください。", "error"));
-  const stoppedQuery = query(collection(db, "stopped_days", selectedFacility, "rooms", selectedRoom, "dates"), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
-  stopStoppedDays = onSnapshot(stoppedQuery, (snapshot) => { stoppedDays = new Set(snapshot.docs.map((item) => item.data().date)); renderCalendar(); renderSlots(); }, () => setMessage(availabilityStatus, "停止日情報を取得できません。しばらくしてからお試しください。", "error"));
+  stopStoppedDays = roomsFor(selectedFacility).map((room) => {
+    const stoppedQuery = query(collection(db, "stopped_days", selectedFacility, "rooms", room.id, "dates"), where("date", ">=", start), where("date", "<=", end), orderBy("date"));
+    return onSnapshot(stoppedQuery, (snapshot) => {
+      stoppedDaysByRoom.set(room.id, new Set(snapshot.docs.map((item) => stoppedDayKey(room.id, item.data().date))));
+      stoppedDays = new Set([...stoppedDaysByRoom.values()].flatMap((days) => [...days]));
+      renderCalendar(); renderSlots();
+    }, () => setMessage(availabilityStatus, "停止日情報を取得できません。しばらくしてからお試しください。", "error"));
+  });
 }
 
 availabilityFacility.addEventListener("change", () => setFacility(availabilityFacility.value));
