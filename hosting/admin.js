@@ -23,6 +23,10 @@ const list = document.querySelector("#reservation-list");
 const pendingReservationCount = document.querySelector("#pending-reservation-count");
 const reservationListSection = document.querySelector("#reservation-list-section");
 const editForm = document.querySelector("#edit-form");
+const editStatus = document.querySelector("#edit-status");
+const reviveReservationButton = document.querySelector("#revive-reservation");
+const revivalStatus = document.querySelector("#revival-status");
+const deleteReservationButton = document.querySelector("#delete-reservation");
 const emptyDetail = document.querySelector("#empty-detail");
 const closedDayTemplateForm = document.querySelector("#closed-day-template-form");
 const closedDayIndividualForm = document.querySelector("#closed-day-individual-form");
@@ -81,16 +85,39 @@ function message(target, text, type = "", toastText = text) {
   if (type === "error") showOperationModal("処理に失敗しました。", "error");
 }
 function reservationId(facility, room, date, slot) { return `${facility}_${room}_${date}_${slot}`; }
+function reservationRecordId(slotId) {
+  const suffix = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${slotId}__${suffix}`;
+}
 function reservationStatusLabel(status) {
   return ({ pending: "受付中", confirmed: "確定", canceled: "取消済", closed: "停止" })[status] || status;
 }
 function reservationCreatedAtMillis(reservation) {
   return reservation.createdAt?.toMillis?.() || Number.MAX_SAFE_INTEGER;
 }
+function isActiveReservation(reservation) {
+  return reservation.status === "pending" || reservation.status === "confirmed";
+}
+function hasNewerActiveReservation(reservation, id) {
+  const currentOrder = `${String(reservationCreatedAtMillis(reservation)).padStart(16, "0")}_${id}`;
+  return [...reservations].some(([otherId, other]) => otherId !== id && other.slotId === reservation.slotId && isActiveReservation(other) &&
+    `${String(reservationCreatedAtMillis(other)).padStart(16, "0")}_${otherId}` > currentOrder);
+}
+function refreshReservationActions(reservation, id) {
+  const canceled = reservation.status === "canceled";
+  const blocked = canceled && hasNewerActiveReservation(reservation, id);
+  reviveReservationButton.hidden = !canceled;
+  reviveReservationButton.disabled = blocked;
+  revivalStatus.hidden = !canceled;
+  revivalStatus.textContent = canceled ? (blocked ? "新しい予約があるため復活不可" : "この予約は復活できます。") : "";
+  editStatus.disabled = canceled;
+  deleteReservationButton.hidden = accessFacility !== "all";
+}
 function reservationListSort(left, right) {
   const priority = { pending: 0, confirmed: 1, canceled: 2, closed: 3 };
   const priorityDifference = (priority[left.status] ?? 4) - (priority[right.status] ?? 4);
   if (priorityDifference) return priorityDifference;
+  if (left.slotId === right.slotId) return reservationCreatedAtMillis(right) - reservationCreatedAtMillis(left);
   if (left.status === "pending") return reservationCreatedAtMillis(left) - reservationCreatedAtMillis(right);
   return `${left.date}_${left.slot}`.localeCompare(`${right.date}_${right.slot}`);
 }
@@ -125,10 +152,11 @@ function selectReservation(id) {
   document.querySelector("#edit-name").value = reservation.customerName;
   document.querySelector("#edit-phone").value = reservation.phone;
   document.querySelector("#edit-purpose").value = reservation.purpose;
-  document.querySelector("#edit-status").value = reservation.status;
+  editStatus.value = reservation.status;
   document.querySelector("#edit-notes").value = reservation.notes || "";
   editForm.hidden = false;
   emptyDetail.hidden = true;
+  refreshReservationActions(reservation, id);
   renderList();
 }
 
@@ -177,7 +205,7 @@ function startReservations() {
     entries.sort(([, left], [, right]) => reservationListSort(left, right));
     reservations = new Map(entries);
     if (selectedId && !reservations.has(selectedId)) { selectedId = null; editForm.hidden = true; emptyDetail.hidden = false; }
-    renderList();
+    if (selectedId) selectReservation(selectedId); else renderList();
     renderManagerPendingSummary(reservations.values());
     const pendingCount = pendingReservationsInAccessScope().length;
     message(adminStatus, accessFacility === "all" ? "" : pendingCount ? `${facilityLabel(accessFacility)}の予約を ${pendingCount} 件受付中です。` : "");
@@ -574,29 +602,30 @@ staffReservationForm.addEventListener("submit", async (event) => {
   const date = staffDate.value;
   const slot = document.querySelector("#staff-slot").value;
   const id = reservationId(facility, room, date, slot);
+  const recordId = reservationRecordId(id);
   const email = auth.currentUser?.email;
   if (!email) { message(staffReservationStatus, "職員ログインを確認できません。", "error"); return; }
   try {
-    const [existingReservation, closure, publicClosedDay, stoppedDay] = await Promise.all([
-      getDoc(doc(db, "reservations", id)),
+    const [existingAvailability, closure, publicClosedDay, stoppedDay] = await Promise.all([
+      getDoc(doc(db, "availability", id)),
       getDoc(doc(db, "closureAvailability", publicClosureId(facility, date))),
       getDoc(publicClosedDayRef(facility, date)),
       getDoc(stoppedDayRef(facility, room, date)),
     ]);
     if (closure.exists() || publicClosedDay.exists()) { message(staffReservationStatus, "この日は休館日です。例外開館として休館日を削除してから登録してください。", "error"); return; }
     if (stoppedDay.exists()) { message(staffReservationStatus, "この施設は停止日のため予約できません。別の日付または施設を選択してください。", "error"); return; }
-    if (existingReservation.exists()) { message(staffReservationStatus, "同じ館・部屋・利用日・利用区分には既存予約があります。", "error"); return; }
+    if (existingAvailability.exists() && existingAvailability.data().status !== "available") { message(staffReservationStatus, "同じ館・部屋・利用日・利用区分には既存予約があります。", "error"); return; }
     const reservation = {
-      slotId: id, facility, room, date, slot,
+      reservationId: recordId, slotId: id, facility, room, date, slot,
       customerName: document.querySelector("#staff-name").value.trim(),
       phone: staffPhone.value.trim(),
       purpose: document.querySelector("#staff-purpose").value.trim(),
       notes: document.querySelector("#staff-notes").value.trim(),
       status: "confirmed", isStaffReservation: true, createdBy: email, createdAt: serverTimestamp(),
     };
-    const availabilityRecord = { slotId: id, facility, room, date, slot, status: "confirmed", createdAt: serverTimestamp() };
+    const availabilityRecord = { reservationId: recordId, slotId: id, facility, room, date, slot, status: "confirmed", createdAt: serverTimestamp() };
     const batch = writeBatch(db);
-    batch.set(doc(db, "reservations", id), reservation);
+    batch.set(doc(db, "reservations", recordId), reservation);
     batch.set(doc(db, "availability", id), availabilityRecord);
     addReservationAudit(batch, "create", reservation, id);
     await batch.commit();
@@ -613,18 +642,36 @@ editForm.addEventListener("submit", async (event) => {
   if (!selectedId || !editForm.reportValidity()) return;
   try {
     const reservation = reservations.get(selectedId);
-    const status = document.querySelector("#edit-status").value;
+    if (!reservation) throw new Error("Reservation was not found");
+    const status = editStatus.value;
+    if (reservation.status === "canceled" && status !== "canceled") {
+      message(adminStatus, "取消済み予約は、復活ボタンからのみ復活できます。", "error");
+      return;
+    }
+    const availabilitySnapshot = await getDoc(doc(db, "availability", reservation.slotId));
+    const availabilityOwner = availabilitySnapshot.exists() ? (availabilitySnapshot.data().reservationId || availabilitySnapshot.data().slotId) : null;
+    const ownsAvailability = availabilityOwner === selectedId;
     const batch = writeBatch(db);
-    batch.update(doc(db, "reservations", selectedId), {
+    const reservationChanges = {
       customerName: document.querySelector("#edit-name").value.trim(),
       phone: document.querySelector("#edit-phone").value.trim(),
       purpose: document.querySelector("#edit-purpose").value.trim(),
       notes: document.querySelector("#edit-notes").value.trim(),
       status,
-    });
-    batch.set(doc(db, "availability", selectedId), {
-      slotId: selectedId, facility: reservation.facility, room: reservation.room, date: reservation.date, slot: reservation.slot, status: status === "canceled" ? "available" : status,
-    }, { merge: true });
+    };
+    if (status === "canceled" && reservation.status !== "canceled") reservationChanges.statusBeforeCancellation = reservation.status;
+    batch.update(doc(db, "reservations", selectedId), reservationChanges);
+    if (status === "canceled" && ownsAvailability) {
+      batch.set(doc(db, "availability", reservation.slotId), {
+        reservationId: selectedId, slotId: reservation.slotId, facility: reservation.facility, room: reservation.room,
+        date: reservation.date, slot: reservation.slot, status: "available",
+      }, { merge: true });
+    } else if (status !== "canceled" && ownsAvailability) {
+      batch.set(doc(db, "availability", reservation.slotId), {
+        reservationId: selectedId, slotId: reservation.slotId, facility: reservation.facility, room: reservation.room,
+        date: reservation.date, slot: reservation.slot, status,
+      }, { merge: true });
+    }
     if (status === "closed") {
       batch.set(stoppedDayRef(reservation.facility, reservation.room, reservation.date), {
         facilityId: reservation.facility, room: reservation.room, date: reservation.date,
@@ -639,15 +686,46 @@ editForm.addEventListener("submit", async (event) => {
   } catch { message(adminStatus, "保存できません。職員権限を確認してください。", "error"); }
 });
 
-document.querySelector("#delete-reservation").addEventListener("click", async () => {
+reviveReservationButton.addEventListener("click", async () => {
+  if (!selectedId) return;
+  try {
+    const reservation = reservations.get(selectedId);
+    if (!reservation || reservation.status !== "canceled") return;
+    if (hasNewerActiveReservation(reservation, selectedId)) {
+      refreshReservationActions(reservation, selectedId);
+      message(adminStatus, "新しい予約があるため復活不可", "error");
+      return;
+    }
+    const availabilitySnapshot = await getDoc(doc(db, "availability", reservation.slotId));
+    if (availabilitySnapshot.exists() && availabilitySnapshot.data().status !== "available") {
+      message(adminStatus, "新しい予約があるため復活不可", "error");
+      return;
+    }
+    const restoredStatus = reservation.statusBeforeCancellation === "confirmed" ? "confirmed" : "pending";
+    const batch = writeBatch(db);
+    batch.update(doc(db, "reservations", selectedId), { status: restoredStatus });
+    batch.set(doc(db, "availability", reservation.slotId), {
+      reservationId: selectedId, slotId: reservation.slotId, facility: reservation.facility, room: reservation.room,
+      date: reservation.date, slot: reservation.slot, status: restoredStatus,
+    }, { merge: true });
+    addReservationAudit(batch, "restore", reservation, selectedId);
+    await batch.commit();
+    message(adminStatus, "予約を復活しました。", "success");
+  } catch { message(adminStatus, "予約を復活できません。職員権限を確認してください。", "error"); }
+});
+
+deleteReservationButton.addEventListener("click", async () => {
+  if (accessFacility !== "all") { message(adminStatus, "予約を削除できるのは館長アカウントのみです。", "error"); return; }
   if (!selectedId || !window.confirm("この予約を削除しますか？")) return;
   try {
     const reservation = reservations.get(selectedId);
     if (!reservation) throw new Error("Reservation was not found");
+    const availabilitySnapshot = await getDoc(doc(db, "availability", reservation.slotId));
+    const availabilityOwner = availabilitySnapshot.exists() ? (availabilitySnapshot.data().reservationId || availabilitySnapshot.data().slotId) : null;
     const batch = writeBatch(db);
     addReservationAudit(batch, "delete", reservation, selectedId);
     batch.delete(doc(db, "reservations", selectedId));
-    batch.delete(doc(db, "availability", selectedId));
+    if (availabilityOwner === selectedId) batch.delete(doc(db, "availability", reservation.slotId));
     if (reservation.status === "closed") batch.delete(stoppedDayRef(reservation.facility, reservation.room, reservation.date));
     await batch.commit();
     message(adminStatus, "予約を削除しました。", "success");

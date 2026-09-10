@@ -33,16 +33,17 @@ service cloud.firestore {
              ]);
     }
 
-    function isValidReservation(slotId) {
+    function isValidReservation(reservationId) {
       return request.resource.data.keys().hasAll([
-               "slotId", "facility", "room", "date", "slot", "customerName",
+               "reservationId", "slotId", "facility", "room", "date", "slot", "customerName",
                "phone", "purpose", "notes", "status", "createdAt"
              ]) &&
              request.resource.data.keys().hasOnly([
-               "slotId", "facility", "room", "date", "slot", "customerName",
+               "reservationId", "slotId", "facility", "room", "date", "slot", "customerName",
                "phone", "purpose", "notes", "status", "createdAt"
              ]) &&
-             request.resource.data.slotId == slotId &&
+             request.resource.data.reservationId == reservationId &&
+             (reservationId == request.resource.data.slotId || reservationId.matches("^" + request.resource.data.slotId + "__[A-Za-z0-9-]+$")) &&
              request.resource.data.slotId == request.resource.data.facility + "_" + request.resource.data.room + "_" + request.resource.data.date + "_" + request.resource.data.slot &&
              request.resource.data.facility in ["higashiyama", "hatano", "toyohara"] &&
              isValidRoom(request.resource.data.facility, request.resource.data.room) &&
@@ -64,12 +65,13 @@ service cloud.firestore {
 
     function isValidAvailability(slotId) {
       return request.resource.data.keys().hasAll([
-               "slotId", "facility", "room", "date", "slot", "status", "createdAt"
+               "reservationId", "slotId", "facility", "room", "date", "slot", "status", "createdAt"
              ]) &&
              request.resource.data.keys().hasOnly([
-               "slotId", "facility", "room", "date", "slot", "status", "createdAt"
+               "reservationId", "slotId", "facility", "room", "date", "slot", "status", "createdAt"
              ]) &&
              request.resource.data.slotId == slotId &&
+             request.resource.data.reservationId is string &&
              request.resource.data.slotId == request.resource.data.facility + "_" + request.resource.data.room + "_" + request.resource.data.date + "_" + request.resource.data.slot &&
              request.resource.data.facility in ["higashiyama", "hatano", "toyohara"] &&
              isValidRoom(request.resource.data.facility, request.resource.data.room) &&
@@ -79,16 +81,17 @@ service cloud.firestore {
              request.resource.data.createdAt == request.time;
     }
 
-    function isValidStaffReservation(slotId) {
+    function isValidStaffReservation(reservationId) {
       return request.resource.data.keys().hasAll([
-               "slotId", "facility", "room", "date", "slot", "customerName", "phone",
+               "reservationId", "slotId", "facility", "room", "date", "slot", "customerName", "phone",
                "purpose", "notes", "status", "isStaffReservation", "createdBy", "createdAt"
              ]) &&
              request.resource.data.keys().hasOnly([
-               "slotId", "facility", "room", "date", "slot", "customerName", "phone",
+               "reservationId", "slotId", "facility", "room", "date", "slot", "customerName", "phone",
                "purpose", "notes", "status", "isStaffReservation", "createdBy", "createdAt"
              ]) &&
-             request.resource.data.slotId == slotId &&
+             request.resource.data.reservationId == reservationId &&
+             (reservationId == request.resource.data.slotId || reservationId.matches("^" + request.resource.data.slotId + "__[A-Za-z0-9-]+$")) &&
              request.resource.data.slotId == request.resource.data.facility + "_" + request.resource.data.room + "_" + request.resource.data.date + "_" + request.resource.data.slot &&
              request.resource.data.facility in ["higashiyama", "hatano", "toyohara"] &&
              isValidRoom(request.resource.data.facility, request.resource.data.room) &&
@@ -106,12 +109,13 @@ service cloud.firestore {
 
     function isValidStaffAvailability(slotId) {
       return request.resource.data.keys().hasAll([
-               "slotId", "facility", "room", "date", "slot", "status", "createdAt"
+               "reservationId", "slotId", "facility", "room", "date", "slot", "status", "createdAt"
              ]) &&
              request.resource.data.keys().hasOnly([
-               "slotId", "facility", "room", "date", "slot", "status", "createdAt"
+               "reservationId", "slotId", "facility", "room", "date", "slot", "status", "createdAt"
              ]) &&
              request.resource.data.slotId == slotId &&
+             request.resource.data.reservationId is string &&
              request.resource.data.slotId == request.resource.data.facility + "_" + request.resource.data.room + "_" + request.resource.data.date + "_" + request.resource.data.slot &&
              request.resource.data.facility in ["higashiyama", "hatano", "toyohara"] &&
              isValidRoom(request.resource.data.facility, request.resource.data.room) &&
@@ -124,7 +128,7 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
                "action", "reservationId", "facility", "room", "date", "slot", "performedBy", "performedAt"
              ]) &&
-             request.resource.data.action in ["create", "update", "delete"] &&
+             request.resource.data.action in ["create", "update", "delete", "restore"] &&
              request.resource.data.reservationId is string &&
              request.resource.data.facility in ["higashiyama", "hatano", "toyohara"] &&
              isValidRoom(request.resource.data.facility, request.resource.data.room) &&
@@ -169,25 +173,36 @@ service cloud.firestore {
     }
 
     function isClosedDay(facility, date) {
-      return exists(/databases/$(database)/documents/closureAvailability/$(facility + "_" + date));
+      return exists(/databases/$(database)/documents/closureAvailability/$(facility + "_" + date)) ||
+             exists(/databases/$(database)/documents/closed_days/$(facility)/dates/$(date));
     }
 
-    // The document ID fixes the facility, room, date, and usage category. A slot
-    // can be created once, which prevents a duplicate public submission.
-    match /reservations/{slotId} {
+    function isStoppedDay(facility, room, date) {
+      return exists(/databases/$(database)/documents/stopped_days/$(facility)/rooms/$(room)/dates/$(date));
+    }
+
+    // slotId identifies the bookable slot; reservationId identifies one entry in
+    // its history stack. The availability document names the currently active one.
+    match /reservations/{reservationId} {
       // Public creation must atomically add the matching non-private
       // availability record. This keeps reservation details private.
       allow create: if (canSubmitPublicReservation(request.resource.data.facility) && resource == null &&
-        isValidReservation(slotId) &&
+        isValidReservation(reservationId) &&
         !isClosedDay(request.resource.data.facility, request.resource.data.date) &&
-        getAfter(/databases/$(database)/documents/availability/$(slotId)).data.slotId == slotId) ||
+        !isStoppedDay(request.resource.data.facility, request.resource.data.room, request.resource.data.date) &&
+        getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.slotId == request.resource.data.slotId &&
+        getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.reservationId == reservationId &&
+        getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.status == "pending") ||
         (isAdmin() && resource == null && managesFacility(request.resource.data.facility) &&
-        isValidStaffReservation(slotId) &&
+        isValidStaffReservation(reservationId) &&
         !isClosedDay(request.resource.data.facility, request.resource.data.date) &&
-        getAfter(/databases/$(database)/documents/availability/$(slotId)).data.slotId == slotId &&
-        getAfter(/databases/$(database)/documents/availability/$(slotId)).data.status == "confirmed");
+        !isStoppedDay(request.resource.data.facility, request.resource.data.room, request.resource.data.date) &&
+        getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.slotId == request.resource.data.slotId &&
+        getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.reservationId == reservationId &&
+        getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.status == "confirmed");
 
-      allow read, update, delete: if managesFacility(resource.data.facility);
+      allow read, update: if managesFacility(resource.data.facility);
+      allow delete: if isManager();
     }
 
     match /availability/{slotId} {
@@ -195,12 +210,16 @@ service cloud.firestore {
       allow read: if true;
       allow create: if (isAdmin() && managesFacility(request.resource.data.facility) &&
         isValidStaffAvailability(slotId) &&
-        getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.slotId == slotId &&
-        getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.status == "confirmed") || (canSubmitPublicReservation(request.resource.data.facility) && resource == null &&
+        getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.slotId == slotId &&
+        getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.status == "confirmed") || (canSubmitPublicReservation(request.resource.data.facility) && resource == null &&
         isValidAvailability(slotId) &&
-        getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.slotId == slotId &&
-        getAfter(/databases/$(database)/documents/reservations/$(slotId)).data.status == "pending");
-      allow update, delete: if managesFacility(resource.data.facility);
+        getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.slotId == slotId &&
+        getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.status == "pending");
+      allow update: if managesFacility(resource.data.facility) || (canSubmitPublicReservation(request.resource.data.facility) &&
+        resource.data.status == "available" && isValidAvailability(slotId) &&
+        getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.slotId == slotId &&
+        getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.status == "pending");
+      allow delete: if isManager();
     }
 
     match /closedDays/{closedDayId} {

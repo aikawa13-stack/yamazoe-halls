@@ -42,6 +42,10 @@ dateInput.value = selectedDate;
 
 function localDate(date) { const local = new Date(date); local.setMinutes(local.getMinutes() - local.getTimezoneOffset()); return local.toISOString().slice(0, 10); }
 function reservationId(facility, room, date, slot) { return `${facility}_${room}_${date}_${slot}`; }
+function reservationRecordId(slotId) {
+  const suffix = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${slotId}__${suffix}`;
+}
 function closureAvailabilityId(facility, date) { return `${facility}_${date}`; }
 function closedDayRef(facility, date) { return doc(db, "closed_days", facility, "dates", date); }
 function stoppedDayRef(facility, room, date) { return doc(db, "stopped_days", facility, "rooms", room, "dates", date); }
@@ -166,9 +170,9 @@ form.addEventListener("submit", async (event) => {
     setMessage(formStatus, phoneError, "error"); showPublicOperationModal(phoneError); phoneInput.focus(); return;
   }
   if (!form.reportValidity()) return;
-  const data = new FormData(form); const facility = String(data.get("facility")); const room = String(data.get("room")); const date = String(data.get("date")); const slot = String(data.get("slot")); const id = reservationId(facility, room, date, slot); const createdAt = serverTimestamp();
-  const reservation = { slotId: id, facility, room, date, slot, customerName: String(data.get("customerName")).trim(), phone: String(data.get("phone")).trim(), purpose: String(data.get("purpose")).trim(), notes: String(data.get("notes")).trim(), status: "pending", createdAt };
-  const availabilityRecord = { slotId: id, facility, room, date, slot, status: "pending", createdAt };
+  const data = new FormData(form); const facility = String(data.get("facility")); const room = String(data.get("room")); const date = String(data.get("date")); const slot = String(data.get("slot")); const id = reservationId(facility, room, date, slot); const recordId = reservationRecordId(id); const createdAt = serverTimestamp();
+  const reservation = { reservationId: recordId, slotId: id, facility, room, date, slot, customerName: String(data.get("customerName")).trim(), phone: String(data.get("phone")).trim(), purpose: String(data.get("purpose")).trim(), notes: String(data.get("notes")).trim(), status: "pending", createdAt };
+  const availabilityRecord = { reservationId: recordId, slotId: id, facility, room, date, slot, status: "pending", createdAt };
   submitButton.disabled = true; setMessage(formStatus, "予約を送信しています…");
   try {
     const [existingAvailability, closure, publicClosedDay, stoppedDay] = await Promise.all([
@@ -187,13 +191,13 @@ form.addEventListener("submit", async (event) => {
       setMessage(formStatus, "選択した施設は停止日のため予約できません。別の日付または施設を選択してください。", "error");
       return;
     }
-    if (existingAvailability.exists()) {
+    if (existingAvailability.exists() && existingAvailability.data().status !== "available") {
       availability.set(id, existingAvailability.data()); renderCalendar(); renderSlots();
       setMessage(formStatus, "選択した館・施設・利用日・利用区分はすでに受付済みです。別の予約枠を選択してください。", "error");
       return;
     }
     const batch = writeBatch(db);
-    batch.set(doc(db, "reservations", id), reservation);
+    batch.set(doc(db, "reservations", recordId), reservation);
     batch.set(doc(db, "availability", id), availabilityRecord);
     await batch.commit();
     form.reset(); formFacility.value = selectedFacility; fillRooms(formRoom, selectedFacility, selectedRoom); dateInput.value = selectedDate;

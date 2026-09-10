@@ -156,7 +156,8 @@
               <label>利用目的<textarea id="edit-purpose" maxlength="200" rows="3" required></textarea></label>
               <label>状態<select id="edit-status" required><option value="pending">受付中</option><option value="confirmed">確定</option><option value="canceled">取消済</option><option value="closed">停止</option></select></label>
               <label>備考<textarea id="edit-notes" maxlength="500" rows="4"></textarea></label>
-              <div class="admin-actions"><button type="submit">変更を保存</button><button id="delete-reservation" class="danger" type="button">予約を削除</button></div>
+              <div class="admin-actions"><button type="submit">変更を保存</button><button id="revive-reservation" class="secondary" type="button" hidden>復活する</button><button id="delete-reservation" class="danger" type="button">予約を削除</button></div>
+              <p id="revival-status" class="hint" role="status" hidden></p>
               <p class="hint">館・施設（部屋）・利用日・利用区分を変更する場合は、現在の予約を削除して新しい枠を作成してください。</p>
             </form>
             <p id="empty-detail">予約を選択すると詳細を表示します。</p>
@@ -167,6 +168,6 @@
     <div id="admin-operation-modal" class="admin-operation-modal" aria-live="polite" aria-atomic="true" hidden>
       <div class="admin-operation-modal__panel" role="status"></div>
     </div>
-    <script type="module" src="./admin.js?v=20260909-closure-stop-status"></script>
+    <script type="module" src="./admin.js?v=20260910-cancellation-stack"></script>
   </body>
 </html>
