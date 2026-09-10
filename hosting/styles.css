@@ -74,11 +74,13 @@ body.has-fixed-back .page-shell { padding-top: 6rem; }
 .slot-item.is-reserved { border-left-color: #c44b45; }
 .slot-item.is-stopped { border-left-color: #ca8a04; }
 .slot-item.is-closed { border-left-color: #374151; }
+.slot-item.is-canceled { border-left-color: #9aa8b3; }
 .slot-item p { font-weight: 800; margin: 0; }
 .slot-item.is-pending p { color: #9f2f2b; }
 .slot-item.is-reserved p { color: #9f2f2b; }
 .slot-item.is-stopped p { color: #854d0e; }
 .slot-item.is-closed p { color: #374151; }
+.slot-item.is-canceled p { color: #526a7d; }
 .form-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .full-width { grid-column: 1 / -1; }
 .hint { color: #596978; font-size: .9rem; line-height: 1.6; margin: 1.5rem 0 1rem; }

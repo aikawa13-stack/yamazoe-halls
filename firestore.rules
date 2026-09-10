@@ -197,6 +197,22 @@ service cloud.firestore {
               isAvailabilityAvailable(facility, room, date, "all_day"));
     }
 
+    // A reservation may be deleted only when no active reservation occupies a
+    // mutually exclusive slot. This protects a partial reservation from being
+    // removed through an all-day dependency view (and vice versa).
+    function hasNoActiveDependency(facility, room, date, slot) {
+      return (slot == "all_day" &&
+              (!exists(/databases/$(database)/documents/availability/$(facility + "_" + room + "_" + date + "_morning")) ||
+               !(get(/databases/$(database)/documents/availability/$(facility + "_" + room + "_" + date + "_morning")).data.status in ["pending", "confirmed"])) &&
+              (!exists(/databases/$(database)/documents/availability/$(facility + "_" + room + "_" + date + "_afternoon")) ||
+               !(get(/databases/$(database)/documents/availability/$(facility + "_" + room + "_" + date + "_afternoon")).data.status in ["pending", "confirmed"])) &&
+              (!exists(/databases/$(database)/documents/availability/$(facility + "_" + room + "_" + date + "_night")) ||
+               !(get(/databases/$(database)/documents/availability/$(facility + "_" + room + "_" + date + "_night")).data.status in ["pending", "confirmed"]))) ||
+             (slot in ["morning", "afternoon", "night"] &&
+              (!exists(/databases/$(database)/documents/availability/$(facility + "_" + room + "_" + date + "_all_day")) ||
+               !(get(/databases/$(database)/documents/availability/$(facility + "_" + room + "_" + date + "_all_day")).data.status in ["pending", "confirmed"])));
+    }
+
     // slotId identifies the bookable slot; reservationId identifies one entry in
     // its history stack. The availability document names the currently active one.
     match /reservations/{reservationId} {
@@ -220,7 +236,7 @@ service cloud.firestore {
         getAfter(/databases/$(database)/documents/availability/$(request.resource.data.slotId)).data.status == "confirmed");
 
       allow read, update: if managesFacility(resource.data.facility);
-      allow delete: if isManager();
+      allow delete: if isManager() && hasNoActiveDependency(resource.data.facility, resource.data.room, resource.data.date, resource.data.slot);
     }
 
     match /availability/{slotId} {
