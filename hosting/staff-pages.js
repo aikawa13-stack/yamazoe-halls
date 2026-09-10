@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, getIdTokenResult, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-import { collection, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, doc, getDoc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { facilityLabel, roomsFor, slots } from "./config.js";
 
 const firebaseConfig = { apiKey: "AIzaSyB4RYPAvnwets8LI6Vefnuxc_eC7ftymig", authDomain: "yamazoe-halls-staging.firebaseapp.com", projectId: "yamazoe-halls-staging", appId: "1:715762011677:web:e31b304a036c23f64240f4" };
@@ -54,4 +54,24 @@ function showLogin(user, claims) { const login = document.querySelector("#login-
 document.querySelector("#login-form").addEventListener("submit", async (event) => { event.preventDefault(); try { await signInWithEmailAndPassword(auth, document.querySelector("#login-email").value, document.querySelector("#login-password").value); } catch { document.querySelector("#login-status").textContent = "メールアドレスまたはパスワードを確認してください。"; } });
 document.querySelector("#sign-out")?.addEventListener("click", () => signOut(auth));
 document.querySelectorAll('a[href="/admin.html"]').forEach((link) => { link.href = "/admin.html?manage=1"; });
+document.addEventListener("click", async (event) => {
+  if (page !== "daily") return;
+  const item = event.target.closest(".slot-item"); if (!item) return;
+  const facility = accessFacility === "all" ? (params.get("facility") || "higashiyama") : accessFacility;
+  const date = params.get("date") || localDate(new Date()); const roomLabel = item.closest(".daily-room")?.querySelector("h3")?.textContent;
+  const room = roomsFor(facility).find((entry) => entry.label === roomLabel)?.id; const slot = slots.find((entry) => item.querySelector("h4")?.textContent.startsWith(entry.label))?.id;
+  if (!room || !slot) return;
+  if (item.classList.contains("is-available")) { location.href = `/staff/reserve?facility=${facility}&room=${room}&date=${date}&slot=${slot}`; return; }
+  const direct = await getDoc(doc(db, "availability", reservationId(facility, room, date, slot)));
+  let reservationIdForDetail = direct.data()?.reservationId;
+  if (!reservationIdForDetail) {
+    for (const otherSlot of conflicts(slot)) { const related = await getDoc(doc(db, "availability", reservationId(facility, room, date, otherSlot))); if (related.data()?.reservationId) { reservationIdForDetail = related.data().reservationId; break; } }
+  }
+  if (reservationIdForDetail) location.href = `/staff/detail?reservationId=${encodeURIComponent(reservationIdForDetail)}&facility=${facility}&date=${date}`;
+  else message("この枠には操作できる予約詳細がありません。", "error");
+});
+if (page === "daily") {
+  const facility = params.get("facility") || "higashiyama"; const date = params.get("date") || localDate(new Date());
+  const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = `/staff/calendar?facility=${encodeURIComponent(facility)}&month=${date.slice(0, 7)}`; back.textContent = "戻る"; document.body.append(back);
+}
 onAuthStateChanged(auth, async (user) => showLogin(user, user ? (await getIdTokenResult(user, true)).claims : {}));

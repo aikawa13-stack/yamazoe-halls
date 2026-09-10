@@ -57,8 +57,15 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .confirmation dl { display: grid; gap: .5rem; grid-template-columns: max-content 1fr; line-height: 1.6; }
 .confirmation dt { color: #526a7d; font-weight: 800; }
 .confirmation dd { margin: 0; }
+.confirmation-details { display: grid; gap: .5rem; grid-template-columns: max-content 1fr; line-height: 1.65; }
+.confirmation-details dt { color: #526a7d; font-weight: 800; }
+.confirmation-details dd { margin: 0; }
+.slot-item:not(.is-available) { cursor: pointer; }
 .link-button { background: transparent; color: #596978; min-height: auto; padding: 0; text-decoration: underline; }
 .link-button:hover { background: transparent; color: #17324d; }
+.page-back { background: #526a7d; border-radius: .55rem; color: #fff; display: inline-block; font-weight: 800; min-height: 3rem; padding: .75rem 1rem; text-decoration: none; }
+.page-back:hover { background: #31485e; }
+.page-back-fixed { bottom: 1.25rem; box-shadow: 0 8px 22px rgba(23, 50, 77, .2); position: fixed; right: 1.25rem; z-index: 20; }
 .slot-item { border: 1px solid #d5e0e6; border-left: .4rem solid #2477b8; border-radius: .7rem; display: grid; gap: .8rem; padding: 1rem; }
 .slot-item.is-pending { border-left-color: #2477b8; }
 .slot-item.is-reserved { border-left-color: #2477b8; }

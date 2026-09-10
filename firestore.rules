@@ -96,7 +96,7 @@ service cloud.firestore {
              request.resource.data.facility in ["higashiyama", "hatano", "toyohara"] &&
              isValidRoom(request.resource.data.facility, request.resource.data.room) &&
              request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") &&
-             request.resource.data.slot in ["morning", "afternoon", "night"] &&
+             request.resource.data.slot in ["morning", "afternoon", "night", "all_day"] &&
              request.resource.data.customerName is string && request.resource.data.customerName.size() <= 80 &&
              request.resource.data.phone is string &&
              (request.resource.data.phone == "" || request.resource.data.phone.matches("^[0-9]{10,30}$")) &&
@@ -120,7 +120,7 @@ service cloud.firestore {
              request.resource.data.facility in ["higashiyama", "hatano", "toyohara"] &&
              isValidRoom(request.resource.data.facility, request.resource.data.room) &&
              request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") &&
-             request.resource.data.slot in ["morning", "afternoon", "night"] &&
+             request.resource.data.slot in ["morning", "afternoon", "night", "all_day"] &&
              request.resource.data.status == "confirmed" && request.resource.data.createdAt == request.time;
     }
 

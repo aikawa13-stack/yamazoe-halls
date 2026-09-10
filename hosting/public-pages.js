@@ -118,3 +118,13 @@ function startReserve() {
 if (page === "calendar") startCalendar();
 if (page === "daily") startDaily();
 if (page === "reserve") startReserve();
+
+const returnTargets = {
+  calendar: "/",
+  daily: `/calendar?facility=${encodeURIComponent(params.get("facility") || "higashiyama")}&month=${encodeURIComponent((params.get("date") || today).slice(0, 7))}`,
+  reserve: `/daily?facility=${encodeURIComponent(params.get("facility") || "higashiyama")}&date=${encodeURIComponent(params.get("date") || today)}`,
+};
+if (returnTargets[page]) {
+  const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = returnTargets[page]; back.textContent = "戻る";
+  document.body.append(back);
+}
