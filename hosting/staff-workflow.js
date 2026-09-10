@@ -33,20 +33,22 @@ function startReserve() {
 
 function statusLabel(status) { return ({ pending: "受付中", confirmed: "確定", canceled: "キャンセル済", stopped: "停止", closed: "休館日", available: "空き" })[status] || status; }
 function renderEntries(entries) { document.querySelector("#detail-list").replaceChildren(...entries.map(([key, value]) => { const row = document.createElement("div"); const term = document.createElement("dt"); const description = document.createElement("dd"); term.textContent = key; description.textContent = value || "—"; row.append(term, description); return row; })); }
+async function findReservationId(facility, room, date, slot) { const snapshot = await getDocs(query(collection(db, "reservations"), where("facility", "==", facility))); const matches = snapshot.docs.filter((item) => { const data = item.data(); return data.room === room && data.date === date && data.slot === slot; }).sort((left, right) => { const leftActive = ["pending", "confirmed"].includes(left.data().status) ? 1 : 0; const rightActive = ["pending", "confirmed"].includes(right.data().status) ? 1 : 0; if (leftActive !== rightActive) return rightActive - leftActive; return (right.data().createdAt?.toMillis?.() || 0) - (left.data().createdAt?.toMillis?.() || 0); }); return matches[0]?.id || null; }
 async function activeDependencies(reservation) { const related = await Promise.all(conflicts(reservation.slot).map((slot) => getDoc(doc(db, "availability", reservationId(reservation.facility, reservation.room, reservation.date, slot))))); return related.some((item) => ["pending", "confirmed"].includes(item.data()?.status)); }
 async function canRestore(reservation) { const documents = await Promise.all([getDoc(doc(db, "availability", reservation.slotId)), ...conflicts(reservation.slot).map((slot) => getDoc(doc(db, "availability", reservationId(reservation.facility, reservation.room, reservation.date, slot))))]); return documents.every((item) => !item.exists() || ["available", "canceled"].includes(item.data().status)); }
 
 async function startDetail() {
-  const id = params.get("reservationId"); const facility = params.get("facility"); const date = params.get("date"); const room = params.get("room"); const slot = params.get("slot");
+  let id = params.get("reservationId"); const facility = params.get("facility"); const date = params.get("date"); const room = params.get("room"); const slot = params.get("slot");
   if (!facility || !date || !validStaffScope(facility)) { location.replace("/staff/calendar"); return; }
   const confirmButton = document.querySelector("#confirm-reservation"); const revive = document.querySelector("#revive-reservation"); const cancel = document.querySelector("#cancel-reservation"); const remove = document.querySelector("#delete-reservation");
+  if (!id && room && slot) id = await findReservationId(facility, room, date, slot);
   if (!id) {
     if (!room || !slot) { location.replace(dailyUrl(facility, date)); return; }
     document.querySelector("#workflow-panel").hidden = false; document.querySelector("#detail-heading").textContent = `${facilityLabel(facility)} · ${roomLabel(facility, room)} · ${date}`; backLink(facility, date);
     renderEntries([["施設（部屋）", roomLabel(facility, room)], ["利用日", date], ["利用区分", slotLabel(slot)], ["状態", statusLabel(params.get("status") || "stopped")]]);
     confirmButton.hidden = true; cancel.hidden = true; revive.hidden = true; remove.hidden = true; message("この枠には予約データがありません。停止・休館の設定内容は予約詳細から変更できません。", "error"); return;
   }
-  const snapshot = await getDoc(doc(db, "reservations", id)); if (!snapshot.exists()) { message("予約が見つかりません。", "error"); return; }
+  let snapshot = await getDoc(doc(db, "reservations", id)); if (!snapshot.exists() && room && slot) { const fallbackId = await findReservationId(facility, room, date, slot); if (fallbackId && fallbackId !== id) { id = fallbackId; snapshot = await getDoc(doc(db, "reservations", id)); } } if (!snapshot.exists()) { message("予約が見つかりません。", "error"); return; }
   const reservation = snapshot.data(); if (!validStaffScope(reservation.facility)) { message("この予約を閲覧する権限がありません。", "error"); return; }
   const selectedSlot = params.get("selectedSlot") || reservation.slot; const dependencyView = selectedSlot !== reservation.slot;
   document.querySelector("#workflow-panel").hidden = false; document.querySelector("#detail-heading").textContent = `${facilityLabel(reservation.facility)} · ${roomLabel(reservation.facility, reservation.room)} · ${reservation.date}`; backLink(reservation.facility, reservation.date);

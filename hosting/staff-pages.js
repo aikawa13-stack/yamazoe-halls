@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, getIdTokenResult, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-import { collection, doc, getDoc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, getFirestore, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { facilityLabel, roomsFor, slots } from "./config.js";
 
 const firebaseConfig = { apiKey: "AIzaSyB4RYPAvnwets8LI6Vefnuxc_eC7ftymig", authDomain: "yamazoe-halls-staging.firebaseapp.com", projectId: "yamazoe-halls-staging", appId: "1:715762011677:web:e31b304a036c23f64240f4" };
@@ -16,6 +16,14 @@ function label(status, detail = false) { return (detail ? { available: "空き",
 function message(text, type = "") { const node = document.querySelector("#page-status"); if (node) { node.textContent = text; node.className = type; } }
 function closureId(facility, date) { return `${facility}_${date.replaceAll("-", "")}`; }
 function weekday(date) { return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date(`${date}T00:00:00`).getDay()]; }
+async function findReservationId(facility, room, date, slot) {
+  const snapshot = await getDocs(query(collection(db, "reservations"), where("facility", "==", facility)));
+  const matches = snapshot.docs.filter((item) => { const data = item.data(); return data.room === room && data.date === date && data.slot === slot; }).sort((left, right) => {
+    const leftActive = ["pending", "confirmed"].includes(left.data().status) ? 1 : 0; const rightActive = ["pending", "confirmed"].includes(right.data().status) ? 1 : 0;
+    if (leftActive !== rightActive) return rightActive - leftActive; return (right.data().createdAt?.toMillis?.() || 0) - (left.data().createdAt?.toMillis?.() || 0);
+  });
+  return matches[0]?.id || null;
+}
 
 function listen(facility, month, callback) {
   const [start, end] = monthBounds(month); const records = new Map(); const closed = new Set(); const stoppedByRoom = new Map();
@@ -63,9 +71,9 @@ document.addEventListener("click", async (event) => {
   if (!room || !slot) return;
   if (item.classList.contains("is-available")) { location.href = `/staff/reserve?facility=${facility}&room=${room}&date=${date}&slot=${slot}`; return; }
   const direct = await getDoc(doc(db, "availability", reservationId(facility, room, date, slot)));
-  let reservationIdForDetail = direct.data()?.reservationId;
+  let reservationIdForDetail = direct.data()?.reservationId || direct.data()?.reservationID || direct.data()?.slotId || await findReservationId(facility, room, date, slot);
   if (!reservationIdForDetail) {
-    for (const otherSlot of conflicts(slot)) { const related = await getDoc(doc(db, "availability", reservationId(facility, room, date, otherSlot))); if (related.data()?.reservationId) { reservationIdForDetail = related.data().reservationId; break; } }
+    for (const otherSlot of conflicts(slot)) { const related = await getDoc(doc(db, "availability", reservationId(facility, room, date, otherSlot))); reservationIdForDetail = related.data()?.reservationId || related.data()?.reservationID || related.data()?.slotId || await findReservationId(facility, room, date, otherSlot); if (reservationIdForDetail) break; }
   }
   const detail = new URLSearchParams({ facility, room, date, slot, selectedSlot: slot, status: item.dataset.status || (item.classList.contains("is-reserved") ? "confirmed" : item.classList.contains("is-closed") ? "closed" : item.classList.contains("is-stopped") ? "stopped" : "canceled") });
   if (reservationIdForDetail) detail.set("reservationId", reservationIdForDetail);
