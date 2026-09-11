@@ -48,7 +48,7 @@ function slotStatus(data, facility, room, date, slot) {
 }
 function reservationDetailUrl(reservation) {
   const detail = new URLSearchParams({ reservationId: reservation.id, facility: reservation.facility, room: reservation.room, date: reservation.date, slot: reservation.slot, selectedSlot: reservation.slot, status: reservation.status });
-  return `/staff/detail?${detail}`;
+  detail.set("view", "20260911-revival-placement"); return `/staff/detail?${detail}`;
 }
 function startReservationRibbon() {
   unsubscribeRibbon?.(); document.querySelector("#staff-reservation-ribbons")?.remove(); const staffUser = document.querySelector("#staff-user"); const ribbonStack = document.createElement("div"); ribbonStack.id = "staff-reservation-ribbons"; ribbonStack.className = "reservation-ribbon-stack"; staffUser.insertAdjacentElement("afterend", ribbonStack);
@@ -95,7 +95,7 @@ document.addEventListener("click", async (event) => {
   }
   const detail = new URLSearchParams({ facility, room, date, slot, selectedSlot: slot, status: item.dataset.status || (item.classList.contains("is-reserved") ? "confirmed" : item.classList.contains("is-closed") ? "closed" : item.classList.contains("is-stopped") ? "stopped" : "canceled") });
   if (reservationIdForDetail) detail.set("reservationId", reservationIdForDetail);
-  location.href = `/staff/detail?${detail}`;
+  detail.set("view", "20260911-revival-placement"); location.href = `/staff/detail?${detail}`;
 });
 if (page === "daily") {
   const facility = params.get("facility") || "higashiyama"; const date = params.get("date") || localDate(new Date());

@@ -47,7 +47,7 @@ async function canceledReservationsForSlot(reservation) {
   return snapshot.docs.map((item) => ({ ...item.data(), id: item.id })).filter((candidate) => candidate.room === reservation.room && candidate.date === reservation.date && candidate.slot === reservation.slot && candidate.status === "canceled").sort((left, right) => (left.createdAt?.toMillis?.() || 0) - (right.createdAt?.toMillis?.() || 0));
 }
 function reservationCreatedAtLabel(reservation) { return reservation.createdAt?.toDate ? reservation.createdAt.toDate().toLocaleString("ja-JP") : "受付日時不明"; }
-function detailUrl(reservation) { const detail = new URLSearchParams({ reservationId: reservation.id, facility: reservation.facility, room: reservation.room, date: reservation.date, slot: reservation.slot, selectedSlot: reservation.slot, status: reservation.status }); return `/staff/detail?${detail}`; }
+function detailUrl(reservation) { const detail = new URLSearchParams({ reservationId: reservation.id, facility: reservation.facility, room: reservation.room, date: reservation.date, slot: reservation.slot, selectedSlot: reservation.slot, status: reservation.status }); detail.set("view", "20260911-revival-placement"); return `/staff/detail?${detail}`; }
 
 async function startDetail() {
   let id = params.get("reservationId"); const facility = params.get("facility"); const date = params.get("date"); const room = params.get("room"); const slot = params.get("slot");
