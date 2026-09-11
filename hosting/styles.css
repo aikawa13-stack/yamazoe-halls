@@ -79,6 +79,21 @@ body[data-staff-page="daily"] .admin-daily-actions, body[data-staff-page="daily"
 .link-button:hover { background: transparent; color: #17324d; }
 .page-back { background: #526a7d; border-radius: .55rem; color: #fff; display: inline-block; font-weight: 800; min-height: 3rem; padding: .75rem 1rem; text-decoration: none; }
 .page-back:hover { background: #31485e; }
+.landing-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
+.landing-actions .page-back { margin: 0; }
+.page-back-outline { background: #fff; border: 1px solid #526a7d; color: #31485e; }
+.page-back-outline:hover { background: #edf3f6; color: #17324d; }
+.fees-page { width: min(100% - 2rem, 1100px); }
+.fee-notice { color: #31485e; line-height: 1.7; }
+.fee-notice p { margin: .35rem 0; }
+.fee-section h2 { font-size: clamp(1.3rem, 3vw, 1.75rem); margin-bottom: 1.15rem; }
+.fee-table-wrap { -webkit-overflow-scrolling: touch; overflow-x: auto; }
+.fee-table-wrap table { border-collapse: collapse; min-width: 700px; width: 100%; }
+.fee-table-wrap th, .fee-table-wrap td { border: 1px solid #b8c5cf; padding: .8rem .9rem; text-align: right; white-space: nowrap; }
+.fee-table-wrap thead th { background: #17324d; color: #fff; text-align: center; }
+.fee-table-wrap tbody tr:nth-child(even) { background: #f7fbfd; }
+.fee-table-wrap tbody th { color: #17324d; text-align: left; }
+.fee-table-wrap small { font-size: .75em; font-weight: 600; }
 .page-back-fixed { box-shadow: 0 8px 22px rgba(23, 50, 77, .2); font-size: 1.03rem; left: 1.5rem; padding: .85rem 1.15rem; position: fixed; top: 1.5rem; z-index: 20; }
 body.has-fixed-back .page-shell { padding-top: 6rem; }
 .slot-item { border: 1px solid #d5e0e6; border-left: .4rem solid #2477b8; border-radius: .7rem; display: grid; gap: .8rem; padding: 1rem; }
@@ -170,4 +185,4 @@ footer a { color: #596978; font-size: .9rem; }
 @media (prefers-reduced-motion: reduce) { .admin-operation-modal, .admin-operation-modal__panel, .public-operation-modal, .public-operation-modal__panel { transition: none; } }
 @media (max-width: 1000px) { .closed-days-workspace { grid-template-columns: 1fr 1fr; } .closed-days-register-panel { grid-column: 1 / -1; } }
 @media (max-width: 800px) { .admin-layout, .slot-list, .closed-days-workspace, .daily-room-slots, .closed-days-page-controls { grid-template-columns: 1fr; } .closed-days-register-panel { grid-column: auto; } .reservation-list-heading, .revival-candidate { align-items: stretch; flex-direction: column; } .admin-calendar-tools { align-items: stretch; justify-content: stretch; width: 100%; } .admin-facility-control { min-width: 0; width: 100%; } .template-controls button, .individual-closed-day-form button, #save-closed-days { justify-self: stretch; } }
-@media (max-width: 640px) { .page-shell, body.has-fixed-back .page-shell { padding-top: 5.5rem; } .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: auto; } .section-heading { align-items: start; flex-direction: column; } .facility-picker { max-width: none; width: 100%; } .calendar { gap: .25rem; } .calendar-day { min-height: 4.1rem; padding: .4rem .15rem; } .day-marker { font-size: .62rem; padding: .1rem .2rem; } .page-back-fixed { left: 1rem; top: 1rem; } }
+@media (max-width: 640px) { .page-shell, body.has-fixed-back .page-shell { padding-top: 5.5rem; } .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: auto; } .section-heading { align-items: start; flex-direction: column; } .facility-picker { max-width: none; width: 100%; } .landing-actions { align-items: stretch; flex-direction: column; } .landing-actions .page-back { text-align: center; width: 100%; } .calendar { gap: .25rem; } .calendar-day { min-height: 4.1rem; padding: .4rem .15rem; } .day-marker { font-size: .62rem; padding: .1rem .2rem; } .page-back-fixed { left: 1rem; top: 1rem; } }
