@@ -61,4 +61,4 @@ function activate(user, token) {
 }
 $("#login-form").addEventListener("submit", async (event) => { event.preventDefault(); try { await signInWithEmailAndPassword(auth, $("#login-email").value, $("#login-password").value); } catch { $("#login-status").textContent = "メールアドレスまたはパスワードを確認してください。"; } });
 $("#sign-out")?.addEventListener("click", () => signOut(auth));
-onAuthStateChanged(auth, async (user) => { if (!user) { $("#login-panel").hidden = false; $("#closed-days-panel").hidden = true; return; } activate(user, await getIdTokenResult(user, true)); });
+onAuthStateChanged(auth, async (user) => { if (!user) { stopList?.(); stopList = null; $("#staff-user").replaceChildren(); $("#login-panel").hidden = false; $("#closed-days-panel").hidden = true; return; } activate(user, await getIdTokenResult(user, true)); });
