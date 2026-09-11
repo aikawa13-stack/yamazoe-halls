@@ -52,19 +52,17 @@ function slotStatus(data, facility, room, date, slot) {
   return status === "confirmed" ? "reserved" : status === "closed" ? "stopped" : status;
 }
 function startCalendar() {
-  const facilitySelect = document.querySelector("#facility"); const roomSelect = document.querySelector("#room");
+  const facilitySelect = document.querySelector("#facility");
   const calendar = document.querySelector("#calendar"); const heading = document.querySelector("#calendar-month");
   let facility = params.get("facility") || "higashiyama";
-  let room = params.get("room") || roomsFor(facility)[0].id;
   let month = params.get("month") || today.slice(0, 7); let stop = null;
-  function fillRooms() { roomSelect.replaceChildren(...roomsFor(facility).map((item) => new Option(item.label, item.id))); roomSelect.value = room; }
   function render(data) {
     calendar.replaceChildren(); const [year, monthNumber] = month.split("-").map(Number); heading.textContent = `${year}年${monthNumber}月`;
     for (const name of ["日", "月", "火", "水", "木", "金", "土"]) { const cell = document.createElement("div"); cell.className = "weekday"; cell.textContent = name; calendar.append(cell); }
     const first = new Date(year, monthNumber - 1, 1); for (let i = 0; i < first.getDay(); i += 1) calendar.append(document.createElement("div"));
     const days = new Date(year, monthNumber, 0).getDate();
     for (let day = 1; day <= days; day += 1) {
-      const date = localDate(new Date(year, monthNumber - 1, day)); const states = slots.map((slot) => slotStatus(data, facility, room, date, slot.id));
+      const date = localDate(new Date(year, monthNumber - 1, day)); const states = roomsFor(facility).flatMap((room) => slots.map((slot) => slotStatus(data, facility, room.id, date, slot.id)));
       const status = data.closed.has(date) ? "closed" : states.some((item) => item === "pending" || item === "reserved") ? "pending" : states.some((item) => item === "stopped") ? "stopped" : "available";
       const button = document.createElement("button"); button.type = "button"; button.className = `calendar-day is-${status}`; button.disabled = date < today;
       button.innerHTML = `<strong>${day}</strong><span class="day-marker">${statusLabel(status)}</span>`;
@@ -72,9 +70,8 @@ function startCalendar() {
     }
   }
   function subscribe() { stop?.(); stop = listenAvailability(facility, month, render); }
-  facilitySelect.value = facility; fillRooms(); subscribe();
-  facilitySelect.addEventListener("change", () => { facility = facilitySelect.value; room = roomsFor(facility)[0].id; fillRooms(); subscribe(); });
-  roomSelect.addEventListener("change", () => { room = roomSelect.value; subscribe(); });
+  facilitySelect.value = facility; subscribe();
+  facilitySelect.addEventListener("change", () => { facility = facilitySelect.value; subscribe(); });
   document.querySelector("#previous-month").addEventListener("click", () => { const date = new Date(`${month}-01T00:00:00`); date.setMonth(date.getMonth() - 1); if (localDate(date).slice(0, 7) >= today.slice(0, 7)) { month = localDate(date).slice(0, 7); subscribe(); } });
   document.querySelector("#next-month").addEventListener("click", () => { const date = new Date(`${month}-01T00:00:00`); date.setMonth(date.getMonth() + 1); month = localDate(date).slice(0, 7); subscribe(); });
 }
@@ -128,7 +125,7 @@ const returnTargets = {
   reserve: `/daily?facility=${encodeURIComponent(params.get("facility") || "higashiyama")}&date=${encodeURIComponent(params.get("date") || today)}`,
 };
 if (returnTargets[page]) {
-  const labels = { calendar: "← 戻る（予約トップへ）", daily: "← 戻る（カレンダーへ）", reserve: "← 戻る（日付別画面へ）" };
+  const labels = { calendar: "フォームTOPに戻る", daily: "← 戻る（カレンダーへ）", reserve: "当日の予約状況へ戻る" };
   document.body.classList.add("has-fixed-back");
   const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = returnTargets[page]; back.textContent = labels[page];
   document.body.append(back);
