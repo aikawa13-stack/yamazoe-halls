@@ -28,8 +28,8 @@ export const facilities = {
 export const slots = [
   { id: "morning", label: "午前", hours: "9:00–12:00" },
   { id: "afternoon", label: "午後", hours: "13:00–17:00" },
-  { id: "night", label: "夜間", hours: "18:00–21:00" },
-  { id: "all_day", label: "全日", hours: "9:00–21:00" },
+  { id: "night", label: "夜間", hours: "18:00–22:00" },
+  { id: "all_day", label: "全日", hours: "9:00–22:00" },
 ];
 
 export function roomsFor(facility) { return facilities[facility]?.rooms || []; }

@@ -134,7 +134,7 @@
             <label>館<select id="staff-facility" required><option value="higashiyama">東山</option><option value="hatano">波多野（文化伝習館）</option><option value="toyohara">豊原</option></select></label>
             <label>施設（部屋）<select id="staff-room" required></select></label>
             <label>利用日<input id="staff-date" type="date" required /></label>
-            <label>利用区分<select id="staff-slot" required><option value="morning">午前（9:00–12:00）</option><option value="afternoon">午後（13:00–17:00）</option><option value="night">夜間（18:00–21:00）</option></select></label>
+            <label>利用区分<select id="staff-slot" required><option value="morning">午前（9:00–12:00）</option><option value="afternoon">午後（13:00–17:00）</option><option value="night">夜間（18:00–22:00）</option></select></label>
             <label>氏名（任意）<input id="staff-name" maxlength="80" /></label>
             <label>電話番号（任意）<input id="staff-phone" type="text" maxlength="30" inputmode="numeric" autocomplete="tel" /><span id="staff-phone-warning" class="field-warning" role="alert" hidden>電話番号は10桁以上で入力してください。</span></label>
             <label class="full-width">利用目的<textarea id="staff-purpose" maxlength="200" rows="3" required></textarea></label>
@@ -157,7 +157,7 @@
               <label>館<select id="edit-facility" disabled><option value="higashiyama">東山</option><option value="hatano">波多野（文化伝習館）</option><option value="toyohara">豊原</option></select></label>
               <label>施設（部屋）<select id="edit-room" disabled></select></label>
               <label>利用日<input id="edit-date" type="date" readonly /></label>
-              <label>利用区分<select id="edit-slot" disabled><option value="morning">午前（9:00–12:00）</option><option value="afternoon">午後（13:00–17:00）</option><option value="night">夜間（18:00–21:00）</option><option value="all_day">全日（9:00–21:00）</option></select></label>
+              <label>利用区分<select id="edit-slot" disabled><option value="morning">午前（9:00–12:00）</option><option value="afternoon">午後（13:00–17:00）</option><option value="night">夜間（18:00–22:00）</option><option value="all_day">全日（9:00–22:00）</option></select></label>
               <label>氏名<input id="edit-name" maxlength="80" required /></label>
               <label>電話番号<input id="edit-phone" maxlength="30" required /></label>
               <label>利用目的<textarea id="edit-purpose" maxlength="200" rows="3" required></textarea></label>
