@@ -36,11 +36,11 @@ service cloud.firestore {
     function isValidReservation(reservationId) {
       return request.resource.data.keys().hasAll([
                "reservationId", "slotId", "facility", "room", "date", "slot", "customerName",
-               "phone", "purpose", "notes", "status", "createdAt"
+               "phone", "residency", "purpose", "notes", "status", "createdAt"
              ]) &&
              request.resource.data.keys().hasOnly([
                "reservationId", "slotId", "facility", "room", "date", "slot", "customerName",
-               "phone", "purpose", "notes", "status", "createdAt"
+               "phone", "residency", "purpose", "notes", "status", "createdAt"
              ]) &&
              request.resource.data.reservationId == reservationId &&
              (reservationId == request.resource.data.slotId || reservationId.matches("^" + request.resource.data.slotId + "__[A-Za-z0-9-]+$")) &&
@@ -54,6 +54,7 @@ service cloud.firestore {
              request.resource.data.customerName.size() <= 80 &&
              request.resource.data.phone is string &&
              request.resource.data.phone.matches("^[0-9]{10,30}$") &&
+             request.resource.data.residency in ["inside", "outside"] &&
              request.resource.data.purpose is string &&
              request.resource.data.purpose.size() >= 1 &&
              request.resource.data.purpose.size() <= 200 &&
