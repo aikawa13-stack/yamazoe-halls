@@ -71,7 +71,8 @@ body[data-staff-page="daily"] .admin-daily-actions, body[data-staff-page="daily"
 .revival-candidate-list { display: grid; gap: .65rem; }
 .revival-candidate { align-items: center; background: #f7fbfd; border: 1px solid #d5e0e6; border-radius: .7rem; display: flex; gap: .8rem; justify-content: space-between; padding: .75rem; }
 .revival-candidate__summary { color: #31485e; line-height: 1.55; }
-.revival-candidate button { flex: 0 0 auto; min-height: 2.45rem; }
+.revival-candidate__actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: .5rem; }
+.revival-candidate button { min-height: 2.45rem; }
 .slot-item:not(.is-available) { cursor: pointer; }
 .link-button { background: transparent; color: #596978; min-height: auto; padding: 0; text-decoration: underline; }
 .link-button:hover { background: transparent; color: #17324d; }
