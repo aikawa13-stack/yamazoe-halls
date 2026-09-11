@@ -800,12 +800,11 @@ deleteReservationButton.addEventListener("click", async () => {
   try {
     const reservation = reservations.get(selectedId);
     if (!reservation) throw new Error("Reservation was not found");
-    const availabilitySnapshot = await getDoc(doc(db, "availability", reservation.slotId));
-    const availabilityOwner = availabilitySnapshot.exists() ? (availabilitySnapshot.data().reservationId || availabilitySnapshot.data().slotId) : null;
+    const canClearAvailability = ![...reservations.entries()].some(([reservationId, candidate]) => reservationId !== selectedId && candidate.facility === reservation.facility && candidate.room === reservation.room && candidate.date === reservation.date && candidate.slot === reservation.slot && ["pending", "confirmed"].includes(candidate.status));
     const batch = writeBatch(db);
     addReservationAudit(batch, "delete", reservation, selectedId);
     batch.delete(doc(db, "reservations", selectedId));
-    if (availabilityOwner === selectedId) batch.delete(doc(db, "availability", reservation.slotId));
+    if (canClearAvailability) batch.delete(doc(db, "availability", reservation.slotId));
     if (reservation.status === "stopped" || reservation.status === "closed") batch.delete(stoppedDayRef(reservation.facility, reservation.room, reservation.date));
     await batch.commit();
     message(adminStatus, "予約を削除しました。", "success");
