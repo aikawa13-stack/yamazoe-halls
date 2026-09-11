@@ -67,6 +67,7 @@ body[data-staff-page="daily"] .admin-daily-actions, body[data-staff-page="daily"
 .confirmation-details dt { color: #526a7d; font-weight: 800; }
 .confirmation-details dd { margin: 0; }
 .revival-candidates { border-top: 1px solid #d5e0e6; margin-top: 1.5rem; padding-top: 1.25rem; }
+#revive-reservation { margin-bottom: .6rem; }
 .revival-candidates h2 { font-size: 1.15rem; }
 .revival-candidate-list { display: grid; gap: .65rem; }
 .revival-candidate { align-items: center; background: #f7fbfd; border: 1px solid #d5e0e6; border-radius: .7rem; display: flex; gap: .8rem; justify-content: space-between; padding: .75rem; }
