@@ -66,6 +66,12 @@ body[data-staff-page="daily"] .admin-daily-actions, body[data-staff-page="daily"
 .confirmation-details { display: grid; gap: .5rem; grid-template-columns: max-content 1fr; line-height: 1.65; }
 .confirmation-details dt { color: #526a7d; font-weight: 800; }
 .confirmation-details dd { margin: 0; }
+.revival-candidates { border-top: 1px solid #d5e0e6; margin-top: 1.5rem; padding-top: 1.25rem; }
+.revival-candidates h2 { font-size: 1.15rem; }
+.revival-candidate-list { display: grid; gap: .65rem; }
+.revival-candidate { align-items: center; background: #f7fbfd; border: 1px solid #d5e0e6; border-radius: .7rem; display: flex; gap: .8rem; justify-content: space-between; padding: .75rem; }
+.revival-candidate__summary { color: #31485e; line-height: 1.55; }
+.revival-candidate button { flex: 0 0 auto; min-height: 2.45rem; }
 .slot-item:not(.is-available) { cursor: pointer; }
 .link-button { background: transparent; color: #596978; min-height: auto; padding: 0; text-decoration: underline; }
 .link-button:hover { background: transparent; color: #17324d; }
@@ -161,5 +167,5 @@ footer a { color: #596978; font-size: .9rem; }
 .public-operation-modal.is-visible .public-operation-modal__panel { opacity: 1; transform: scale(1) translateY(0); }
 @media (prefers-reduced-motion: reduce) { .admin-operation-modal, .admin-operation-modal__panel, .public-operation-modal, .public-operation-modal__panel { transition: none; } }
 @media (max-width: 1000px) { .closed-days-workspace { grid-template-columns: 1fr 1fr; } .closed-days-register-panel { grid-column: 1 / -1; } }
-@media (max-width: 800px) { .admin-layout, .slot-list, .closed-days-workspace, .daily-room-slots, .closed-days-page-controls { grid-template-columns: 1fr; } .closed-days-register-panel { grid-column: auto; } .reservation-list-heading { align-items: stretch; flex-direction: column; } .admin-calendar-tools { align-items: stretch; justify-content: stretch; width: 100%; } .admin-facility-control { min-width: 0; width: 100%; } .template-controls button, .individual-closed-day-form button, #save-closed-days { justify-self: stretch; } }
+@media (max-width: 800px) { .admin-layout, .slot-list, .closed-days-workspace, .daily-room-slots, .closed-days-page-controls { grid-template-columns: 1fr; } .closed-days-register-panel { grid-column: auto; } .reservation-list-heading, .revival-candidate { align-items: stretch; flex-direction: column; } .admin-calendar-tools { align-items: stretch; justify-content: stretch; width: 100%; } .admin-facility-control { min-width: 0; width: 100%; } .template-controls button, .individual-closed-day-form button, #save-closed-days { justify-self: stretch; } }
 @media (max-width: 640px) { .page-shell, body.has-fixed-back .page-shell { padding-top: 5.5rem; } .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: auto; } .section-heading { align-items: start; flex-direction: column; } .facility-picker { max-width: none; width: 100%; } .calendar { gap: .25rem; } .calendar-day { min-height: 4.1rem; padding: .4rem .15rem; } .day-marker { font-size: .62rem; padding: .1rem .2rem; } .page-back-fixed { left: 1rem; top: 1rem; } }
