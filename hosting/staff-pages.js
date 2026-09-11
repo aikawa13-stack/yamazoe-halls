@@ -105,7 +105,7 @@ if (page === "daily") {
 if (page === "calendar") {
   const calendar = document.querySelector("#calendar"); const facilitySelect = document.querySelector("#facility"); const monthHeading = document.querySelector("#calendar-month");
   const actions = document.createElement("div"); actions.className = "calendar-page-actions"; const closedDays = document.createElement("a"); closedDays.className = "page-back"; closedDays.textContent = "休館日設定"; actions.append(closedDays); calendar.parentElement.insertBefore(actions, calendar);
-  const syncClosedDaysLink = () => { const facility = facilitySelect.value || "higashiyama"; const month = monthHeading.textContent.match(/(\d{4})年(\d+)月/); const value = month ? `${month[1]}-${String(month[2]).padStart(2, "0")}` : localDate(new Date()).slice(0, 7); closedDays.href = `/staff/closed-days?facility=${encodeURIComponent(facility)}&month=${value}`; };
+  const syncClosedDaysLink = () => { const facility = facilitySelect.value || "higashiyama"; const month = monthHeading.textContent.match(/(\d{4})年(\d+)月/); const value = month ? `${month[1]}-${String(month[2]).padStart(2, "0")}` : localDate(new Date()).slice(0, 7); closedDays.href = `/staff/closed-days?facility=${encodeURIComponent(facility)}&month=${value}&view=20260911-no-signout`; };
   facilitySelect.addEventListener("change", () => setTimeout(syncClosedDaysLink)); document.querySelector("#previous-month").addEventListener("click", () => setTimeout(syncClosedDaysLink)); document.querySelector("#next-month").addEventListener("click", () => setTimeout(syncClosedDaysLink)); setTimeout(syncClosedDaysLink);
 }
 onAuthStateChanged(auth, async (user) => showLogin(user, user ? (await getIdTokenResult(user, true)).claims : {}));
