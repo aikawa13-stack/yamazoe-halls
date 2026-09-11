@@ -18,8 +18,8 @@ export const facilities = {
   toyohara: {
     label: "豊原",
     rooms: [
-      { id: "toyohara_large_training_room", label: "大研修室" },
-      { id: "toyohara_training_room", label: "研修室" },
+      { id: "toyohara_large_training_room", label: "大研修室（ランチルーム）" },
+      { id: "toyohara_training_room", label: "研修室（トマトホール）" },
       { id: "toyohara_cooking_practice_room", label: "料理実習室" },
     ],
   },
