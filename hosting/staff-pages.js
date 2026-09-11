@@ -100,7 +100,7 @@ document.addEventListener("click", async (event) => {
 if (page === "daily") {
   const facility = params.get("facility") || "higashiyama"; const date = params.get("date") || localDate(new Date());
   document.body.classList.add("has-fixed-back");
-  const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = `/staff/calendar?facility=${encodeURIComponent(facility)}&month=${date.slice(0, 7)}`; back.textContent = "← 戻る（カレンダーへ）"; document.body.append(back);
+  const back = document.createElement("a"); back.className = "page-back page-back-fixed"; back.href = `/staff/calendar?facility=${encodeURIComponent(facility)}&month=${date.slice(0, 7)}`; back.textContent = "TOPページに戻る"; document.body.append(back);
 }
 if (page === "calendar") {
   const calendar = document.querySelector("#calendar"); const facilitySelect = document.querySelector("#facility"); const monthHeading = document.querySelector("#calendar-month");
