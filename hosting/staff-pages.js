@@ -42,9 +42,9 @@ function slotStatus(data, facility, room, date, slot) {
   const key = reservationId(facility, room, date, slot); const reservationStatus = data.reservations.get(key)?.status;
   if (["confirmed", "pending", "canceled"].includes(reservationStatus)) return reservationStatus;
   if (data.closed.has(date)) return "closed"; if (data.stopped.has(stoppedKey(room, date))) return "stopped";
-  const isActive = (other) => { const otherKey = reservationId(facility, room, date, other); const status = data.reservations.get(otherKey)?.status || data.records.get(otherKey)?.status; return ["pending", "confirmed", "reserved"].includes(status); };
+  const isActive = (other) => ["pending", "confirmed"].includes(data.reservations.get(reservationId(facility, room, date, other))?.status);
   if (conflicts(slot).some(isActive)) return "stopped";
-  const status = data.records.get(key)?.status || "available"; return status === "reserved" ? "confirmed" : status === "closed" ? "stopped" : status;
+  return "available";
 }
 function reservationDetailUrl(reservation) {
   const detail = new URLSearchParams({ reservationId: reservation.id, facility: reservation.facility, room: reservation.room, date: reservation.date, slot: reservation.slot, selectedSlot: reservation.slot, status: reservation.status });

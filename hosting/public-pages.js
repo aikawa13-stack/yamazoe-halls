@@ -39,15 +39,18 @@ function listenAvailability(facility, month, callback) {
   return () => stops.forEach((stop) => stop());
 }
 
+function availabilityStatus(data, facility, room, date, slot) {
+  const record = data.records.get(reservationId(facility, room, date, slot));
+  return record?.reservationId ? record.status : "available";
+}
 function slotStatus(data, facility, room, date, slot) {
   if (data.closed.has(date)) return "closed";
   if (data.stopped.has(stoppedKey(room, date))) return "stopped";
-  const relatedBusy = conflictingSlots(slot).some((otherSlot) => (data.records.get(reservationId(facility, room, date, otherSlot))?.status || "available") !== "available");
+  const relatedBusy = conflictingSlots(slot).some((otherSlot) => availabilityStatus(data, facility, room, date, otherSlot) !== "available");
   if (relatedBusy) return "stopped";
-  const status = data.records.get(reservationId(facility, room, date, slot))?.status || "available";
+  const status = availabilityStatus(data, facility, room, date, slot);
   return status === "confirmed" ? "reserved" : status === "closed" ? "stopped" : status;
 }
-
 function startCalendar() {
   const facilitySelect = document.querySelector("#facility"); const roomSelect = document.querySelector("#room");
   const calendar = document.querySelector("#calendar"); const heading = document.querySelector("#calendar-month");
